@@ -1,5 +1,5 @@
 shinyServer(function(input, output,session) {
-  setwd("C:/Users/Kyle/Documents/CDM/R Testing/Allocation")
+  setwd("C:/Users/Kyle/Documents/CDM/R Testing/Allocation/cdm-allocation")
   
   rawDataSet <- read.table("1113spendPlan.txt", sep = "\t", header = TRUE, fill = TRUE, stringsAsFactors=FALSE)
   
@@ -319,12 +319,12 @@ purgeEmptyColumns <- function(sourceTable){
 }
 
 getMonthTotals <- function(sourceTable){
-  taskNames <- c()
-  if (grepl("All",input$tasks)){
-    taskNames <- getTaskNames(sourceTable)
-  }else{
-    taskNames <- input$tasks
-  }
+  taskNames <- getTaskNames(sourceTable)
+  # if (grepl("All",input$tasks)){
+  #   taskNames <- getTaskNames(sourceTable)
+  # }else{
+  #   taskNames <- input$tasks
+  # }
   
   monthValues <- c()
   for (x in names(sourceTable[ ,grepl( "Mo.Hours" , names(sourceTable) ) ])){
