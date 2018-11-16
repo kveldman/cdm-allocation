@@ -3,7 +3,10 @@ shinyServer(function(input, output,session) {
   
   rawDataSet <- read.table("1113spendPlan.txt", sep = "\t", header = TRUE, fill = TRUE, stringsAsFactors=FALSE)
   
+  print(ncol(rawDataSet))
   rawDataSet <- purgeEmptyColumns(rawDataSet)
+  print(ncol(rawDataSet))
+  # print(rawDataSet[rawDataSet$ID == 'D-R5-TBD21-4',])
  
   
   #Table containing position information for display
@@ -97,11 +100,42 @@ shinyServer(function(input, output,session) {
 
   #Assembly of final table to be displayed
   mergedTable <- merge(personnelInfo,finalTable,by="ID")
+  listOfFunctions <- c()
   
   
   observe({
-    listOfLcats <- unique(mergedTable$LCAT)[order(unique(mergedTable$LCAT))]
-    listOfFunctions <- unique(mergedTable$Function)[order(unique(mergedTable$Function))]
+    # listOfLcats <- unique(mergedTable$LCAT)[order(unique(mergedTable$LCAT))]
+    listOfLcats <- sort(c('Other','Administration/Clerical', 'Applications Developer', 'Applications Systems Analyst', 'Business Process Consultant', 
+                     'Business Systems Analyst', 'Chief Information Security Officer', 'Computer Forensic & Intrusion Analyst', 
+                     'Configuration Management Specialist', 'Data Architect', 'Database Specialist', 'Enterprise Architect', 
+                     'Financial Analyst', 'Hardware Engineer', 'Help Desk Specialist', 'Information Assurance/Security Specialist', 
+                     'Network Specialist', 'Program Manager', 'Project Manager', 'Quality Assurance Specialist', 'Subject Matter Expert', 
+                     'Technical Writer', 'Test Engineer', 'Training Specialist', 'Systems Engineer'))
+    listOfFunctions <- sort(c('Other','Project Manager', 'Lead Systems Integration Manager', 'Cyber Architect', 'Chief Engineer', 
+                     'RFS Lead (Ongoing Assessment Lead)', 'Deputy Program Manager', 'Executive Assistant', 'Finance Manager', 
+                     'Market Liaison', 'Ongoing Assessment Lead', 'Ongoing Assessment Manager', 'Ongoing Assessment Support', 
+                     'PBS Lead', 'PBS Support', 'Procurement Lead', 'Procurement Analyst', 'Project Coordinator/Scheduler', 
+                     'Project Coordinator/Scheduler Lead', 'Project Expediter', 'Project Operations Lead', 'Quality Lead', 
+                     'Quality Support', 'Resource Lead', 'Resource Support', 'RFS Portfolio Manager', 'RFS Response Lead', 
+                     'RFS Support', 'SubKs', 'Tech Writer', 'Transition-In Manager', 'Transition-In Support', 'Delivery Manager', 
+                     'Agency Lead', 'Data Integration Engineer', 'Data Integration Team Lead', 'Data Integration Tech Lead', 
+                     'Lab Support', 'Products Lead', 'Product Owner', 'Requirements Lead', 'Requirements Analyst', 
+                     'Solution Design and Development Manager', 'Solution Architect Lead', 'Solution Architect', 'Engineer', 
+                     'Cloud and Mobile Capability Lead', 'Data Presentation Capability Engineer', 'Data Presentation Capability Lead', 
+                     'Data Protection Capability Lead', 'Deputy SIO Manager', 'Endpoint Security Capability Lead', 
+                     'Engineering Capability Lead', 'Engineering Resource Lead', 'IDAM and PAM Capability Lead', 
+                     'Incident Lead', 'Integration Lead', 'IOS Engineer (Tool)', 'IOS Lead', 'IOS OPS Liaison', 'IOS Project Coordinator',
+                     'ITSM Lead CSI', 'Lab Architect', 'Lab Manager', 'Lab Support', 'Perimeter Defense Capability Lead', 
+                     'ITIL Process Lead', 'Resource Allocation Lead', 'ServiceNow Capability Lead', 'ServiceNow Developer', 
+                     'ServiceNow Engineer', 'Solution Integration and Operations Manager', 'Agency & Test Integration Engineer', 
+                     'Deputy Solution Assurance Manager', 'Governance/Training Lead', 'Governance Analyst', 
+                     'Information Assurance Engineer', 'Information Assurance Lead', 'Information Assurance SME', 
+                     'Incident Response Lead', 'Quality Assurance/Metrics Lead', 'Quality Assurance Support', 'Solution Assurance Manager', 
+                     'Testing Lead', 'Test Engineer', 'Training Lead', 'Vulnerability Manager', 'Technical Writer', 'Automation Lead', 
+                     'Cyber Operations Manager', 'Cyber Ops Team Lead', 'Cyber Tools Lead', 'Forensics Engineer', 
+                     'Incident Response Team Lead', 'Intrusion Detection Analyst', 'IR Process Manager', 'Penetration Tester', 
+                     'Project Coordinator2', 'SIEM Analyst', 'Threat Indicator/Sharing Lead', 'Vulnerability Manager Surge Cyber'))
+    # listOfFunctions <- unique(mergedTable$Function)[order(unique(mergedTable$Function))]
     listOfTasks <- getTaskNames(rawDataSet)
     
     updateSelectInput(session = session, inputId = "allocationFlag", choices = c('All','Over','Under'), selected = 'Over')
@@ -118,16 +152,54 @@ shinyServer(function(input, output,session) {
       data <- data[data$"Allocation Flag" == input$allocationFlag | data$"Allocation Flag" == 'Both',]
     }
     if (input$Function != "All") {
-      data <- data[data$Function == input$Function,]
+      if (input$Function != "Other") {
+        data <- data[data$Function == input$Function,]
+      } else{
+        listOfFunctions <- sort(c('Other','Project Manager', 'Lead Systems Integration Manager', 'Cyber Architect', 'Chief Engineer', 
+                                  'RFS Lead (Ongoing Assessment Lead)', 'Deputy Program Manager', 'Executive Assistant', 'Finance Manager', 
+                                  'Market Liaison', 'Ongoing Assessment Lead', 'Ongoing Assessment Manager', 'Ongoing Assessment Support', 
+                                  'PBS Lead', 'PBS Support', 'Procurement Lead', 'Procurement Analyst', 'Project Coordinator/Scheduler', 
+                                  'Project Coordinator/Scheduler Lead', 'Project Expediter', 'Project Operations Lead', 'Quality Lead', 
+                                  'Quality Support', 'Resource Lead', 'Resource Support', 'RFS Portfolio Manager', 'RFS Response Lead', 
+                                  'RFS Support', 'SubKs', 'Tech Writer', 'Transition-In Manager', 'Transition-In Support', 'Delivery Manager', 
+                                  'Agency Lead', 'Data Integration Engineer', 'Data Integration Team Lead', 'Data Integration Tech Lead', 
+                                  'Lab Support', 'Products Lead', 'Product Owner', 'Requirements Lead', 'Requirements Analyst', 
+                                  'Solution Design and Development Manager', 'Solution Architect Lead', 'Solution Architect', 'Engineer', 
+                                  'Cloud and Mobile Capability Lead', 'Data Presentation Capability Engineer', 'Data Presentation Capability Lead', 
+                                  'Data Protection Capability Lead', 'Deputy SIO Manager', 'Endpoint Security Capability Lead', 
+                                  'Engineering Capability Lead', 'Engineering Resource Lead', 'IDAM and PAM Capability Lead', 
+                                  'Incident Lead', 'Integration Lead', 'IOS Engineer (Tool)', 'IOS Lead', 'IOS OPS Liaison', 'IOS Project Coordinator',
+                                  'ITSM Lead CSI', 'Lab Architect', 'Lab Manager', 'Lab Support', 'Perimeter Defense Capability Lead', 
+                                  'ITIL Process Lead', 'Resource Allocation Lead', 'ServiceNow Capability Lead', 'ServiceNow Developer', 
+                                  'ServiceNow Engineer', 'Solution Integration and Operations Manager', 'Agency & Test Integration Engineer', 
+                                  'Deputy Solution Assurance Manager', 'Governance/Training Lead', 'Governance Analyst', 
+                                  'Information Assurance Engineer', 'Information Assurance Lead', 'Information Assurance SME', 
+                                  'Incident Response Lead', 'Quality Assurance/Metrics Lead', 'Quality Assurance Support', 'Solution Assurance Manager', 
+                                  'Testing Lead', 'Test Engineer', 'Training Lead', 'Vulnerability Manager', 'Technical Writer', 'Automation Lead', 
+                                  'Cyber Operations Manager', 'Cyber Ops Team Lead', 'Cyber Tools Lead', 'Forensics Engineer', 
+                                  'Incident Response Team Lead', 'Intrusion Detection Analyst', 'IR Process Manager', 'Penetration Tester', 
+                                  'Project Coordinator2', 'SIEM Analyst', 'Threat Indicator/Sharing Lead', 'Vulnerability Manager Surge Cyber'))
+        data <- data[!(data$Function %in% listOfFunctions),]
+      }
     }
     if (input$lcat != "All") {
-      data <- data[data$Lcat == input$lcat,]
+      if (input$lcat != "Other") {
+        data <- data[data$LCAT == input$lcat,]
+      } else{
+        listOfLcats <- sort(c('Other','Administration/Clerical', 'Applications Developer', 'Applications Systems Analyst', 'Business Process Consultant', 
+                              'Business Systems Analyst', 'Chief Information Security Officer', 'Computer Forensic & Intrusion Analyst', 
+                              'Configuration Management Specialist', 'Data Architect', 'Database Specialist', 'Enterprise Architect', 
+                              'Financial Analyst', 'Hardware Engineer', 'Help Desk Specialist', 'Information Assurance/Security Specialist', 
+                              'Network Specialist', 'Program Manager', 'Project Manager', 'Quality Assurance Specialist', 'Subject Matter Expert', 
+                              'Technical Writer', 'Test Engineer', 'Training Specialist', 'Systems Engineer'))
+        data <- data[!(data$LCAT %in% listOfLcats),]
+      }
     }
     if (input$filledStatus != "All") {
       if (input$filledStatus == "Filled") {
-        data <- data[nchar(data$ID) == 6,]
+        data <- data[is.na(as.integer(data$ID)) == FALSE,]
       }else if (input$filledStatus == "Unfilled") {
-        data <- data[nchar(data$ID) != 6,]
+        data <- data[is.na(as.integer(data$ID)) == TRUE,]
       }
     }
     if (input$futureAvailability != 'N/A') {
@@ -204,13 +276,13 @@ shinyServer(function(input, output,session) {
       data <- data[data$Function == input$Function,]
     }
     if (input$lcat != "All") {
-      data <- data[data$Lcat == input$lcat,]
+      data <- data[data$LCAT == input$lcat,]
     }
     if (input$filledStatus != "All") {
       if (input$filledStatus == "Filled") {
-        data <- data[nchar(data$ID) == 6,]
+        data <- data[is.na(as.integer(data$ID)) == FALSE,]
       }else if (input$filledStatus == "Unfilled") {
-        data <- data[nchar(data$ID) != 6,]
+        data <- data[is.na(as.integer(data$ID)) == TRUE,]
       }
     }
     
@@ -305,13 +377,16 @@ getTaskNames <- function(sourceTable){
       finalTaskNames <- c(finalTaskNames, substr(tempTaskNames[x],regexpr('Task',tempTaskNames[x]),regexpr('LB',tempTaskNames[x])-2))
     }
   }
-  return(c(sort(unique(finalTaskNames)),sort(unique(finalRFSNames))))
+  return(c(sort(unique(finalRFSNames)),sort(unique(finalTaskNames))))
 }
 
 purgeEmptyColumns <- function(sourceTable){
   colsToKeep <- c()
   for(x in c(1:ncol(sourceTable))){
-    if((all(grepl('-',sourceTable[,x])) == FALSE) | (grepl( "Mo.Hours" , names(sourceTable)[x] ) == TRUE)){
+    if(((all(grepl('-',sourceTable[,x])) == FALSE) | (grepl( "Mo.Hours" , names(sourceTable)[x] ) == TRUE))
+       &&(grepl( "Total" , names(sourceTable)[x] ) == FALSE)
+       &&(grepl( "TOTAL" , names(sourceTable)[x] ) == FALSE)
+       &&(grepl( "X" , names(sourceTable)[x] ) == FALSE)){
       colsToKeep <- c(colsToKeep,x)
     }
   }
@@ -320,11 +395,6 @@ purgeEmptyColumns <- function(sourceTable){
 
 getMonthTotals <- function(sourceTable){
   taskNames <- getTaskNames(sourceTable)
-  # if (grepl("All",input$tasks)){
-  #   taskNames <- getTaskNames(sourceTable)
-  # }else{
-  #   taskNames <- input$tasks
-  # }
   
   monthValues <- c()
   for (x in names(sourceTable[ ,grepl( "Mo.Hours" , names(sourceTable) ) ])){
@@ -333,6 +403,59 @@ getMonthTotals <- function(sourceTable){
   
   exportTable <- c()
   count <- 0
+  
+  # print(names(sourceTable))
+  
+  monthVector <- c()
+  taskVector <- c()
+  
+  for (c in 1:length(names(sourceTable))){
+    foundMonth <- 0
+    foundTask <- 0
+    
+    for (f in 1:length(monthValues)){
+      if(grepl(monthValues[f],names(sourceTable)[c])){
+        monthVector <- c(monthVector,monthValues[f])
+        foundMonth <- 1
+        break
+      } 
+    }
+    if(foundMonth == 0){
+      monthVector <- c(monthVector,'')
+    }
+    
+    for (k in 1:length(taskNames)){
+      if(grepl(taskNames[k],names(sourceTable)[c])){
+        taskVector <- c(taskVector,taskNames[k])
+        foundTask <- 1
+        break
+      }
+    }
+    if(foundTask == 0){
+      taskVector <- c(taskVector,'')
+    }
+  }
+  print(names(sourceTable))
+  print(taskNames)
+  # print('Months')
+  # print((monthVector))
+  print('Tasks')
+  print(taskVector)
+  
+  
+  # for(z in c(1:nrow(sourceTable))){
+  #   monthTotals <- c()
+  #   for(u in c(1:length(monthValues))){
+  #     currentMonthTotal <- 0
+  #     for(h in c(1:length(taskNames))){
+  #       currentLine <- sourceTable[z ,grepl( monthValues[u] , names(sourceTable) ) & grepl( taskNames[h] , names(sourceTable) ) ]
+  #       currentMonthTotal <- currentMonthTotal + sum(as.numeric(currentLine[grepl('-',currentLine) == FALSE]))
+  #       count <- count + 1
+  #     }
+  #     monthTotals <- c(monthTotals, currentMonthTotal)
+  #   }
+  #   exportTable <- c(exportTable, c(sourceTable[z,'ID'],monthTotals))
+  # }
   
   for(z in c(1:nrow(sourceTable))){
     monthTotals <- c()
@@ -348,10 +471,9 @@ getMonthTotals <- function(sourceTable){
     exportTable <- c(exportTable, c(sourceTable[z,'ID'],monthTotals))
   }
   
+  # print(count)
   monthDT <- data.frame(matrix(exportTable, ncol = 13, byrow = TRUE), stringsAsFactors = FALSE)
   names(monthDT) <- names(sourceTable[ , names(sourceTable) == "ID" | grepl( "Mo.Hours" , names(sourceTable) ) ])
   
   return(monthDT)
-  
-  
 }
