@@ -8,7 +8,7 @@ navbarPage("Booz | Allen | Hamilton",
               column(1, 
                      selectInput(inputId = "allocationFlag", label = "Allocation:",choices = NULL)
               ),
-              column(2,
+              column(1,
                      selectInput(inputId = "Function", label = "Function:", choices = NULL)
               ),
               column(2,
@@ -16,6 +16,9 @@ navbarPage("Booz | Allen | Hamilton",
               ),
               column(2,
                      selectInput(inputId = "filledStatus", label = "Position Status:", choices = c('All','Filled','Unfilled'))
+              ),
+              column(1,
+                     selectInput(inputId = "team", label = "Team:", choices = c('All','Bravo','Delta'))
               ),
               column(2,
                      selectizeInput(
@@ -36,32 +39,7 @@ navbarPage("Booz | Allen | Hamilton",
               column(1)
             )
           )
-    # sidebarLayout(
-    #   sidebarPanel(
-    #     width = 1,
-    #     height = 5
-    #     ),
-    #   mainPanel(
-    #     fluidRow(
-    #       column(2, 
-    #         selectInput(inputId = "allocationFlag", label = "Allocation:",choices = NULL)
-    #       ),
-    #       column(3,
-    #         selectInput(inputId = "Function", label = "Function:", choices = NULL)
-    #       ),
-    #       column(3,
-    #         selectInput(inputId = "role", label = "Role:", choices = NULL)
-    #       )
-    #     ),
-    #       
-    #     fluidRow(
-    #       dataTableOutput('flaggedTable')
-    #     ),
-    #     fluidRow(
-    #       dataTableOutput('filteredTable')
-    #     )
-    #   )
-    # )
+
  ),
  tabPanel("Aggregate View"
  ),

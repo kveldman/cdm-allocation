@@ -2,22 +2,25 @@ shinyServer(function(input, output,session) {
   setwd("C:/Users/Kyle/Documents/CDM/R Testing/Allocation/cdm-allocation")
   
   rawDataSet <- read.table("1113spendPlan.txt", sep = "\t", header = TRUE, fill = TRUE, stringsAsFactors=FALSE)
+  # rfs10 <- read.table("rfs10_draft.txt", sep = "\t", header = TRUE, fill = TRUE, stringsAsFactors=FALSE)
   
-  print(ncol(rawDataSet))
+  # importFutureRFS(rfs10)
   rawDataSet <- purgeEmptyColumns(rawDataSet)
-  print(ncol(rawDataSet))
+  # vectorizeData(rawDataSet)
   # print(rawDataSet[rawDataSet$ID == 'D-R5-TBD21-4',])
  
   
   #Table containing position information for display
   personnelInfo <- data.frame(rawDataSet[,2:6])
   names(personnelInfo) <- names(rawDataSet)[2:6]
-  names(personnelInfo)[5] <- 'LCAT'
+  # print(names(personnelInfo))
+  names(personnelInfo)[4] <- 'LCAT'
+  # print(names(personnelInfo))
   
   #Table gathering all month totals for employees.  
-  # monthValues <- rawDataSet[ , names(rawDataSet) == "ID" | grepl( "Mo.Hours" , names(rawDataSet) ) ]
+  monthValues <- rawDataSet[ , names(rawDataSet) == "ID" | grepl( "Mo.Hours" , names(rawDataSet) ) ]
 
-  monthValues <- getMonthTotals(rawDataSet)
+  # monthValues <- getMonthTotals(rawDataSet)
   
   #Gathers headers in a non-User-friendly format
   currentHeaderNames <- names(monthValues)
@@ -146,6 +149,47 @@ shinyServer(function(input, output,session) {
   })  
   
   output$flaggedTable <- DT::renderDataTable(datatable({
+    # testTable <- rawDataSet
+    # 
+    # monthValues <- c()
+    # for (x in names(testTable[ ,grepl( "Mo.Hours" , names(testTable) ) ])){
+    #   monthValues <- c(monthValues,substring(x,10,14))
+    # }
+    # 
+    # testTable <- testTable[ , !grepl( "Mo.Hours" , names(testTable) ) ]
+    # 
+    # exportTable <- c()
+    # 
+    # if (input$team != "All") {
+    #   if(input$team == 'Bravo'){
+    #     testTable <- testTable[,grepl('DEF.D',names(testTable)) == FALSE]
+    #   }else{
+    #     testTable <- testTable[,grepl('DEF.B',names(testTable)) == FALSE]
+    #   }
+    # }
+    # 
+    # if (!('All' %in% input$tasks)) {
+    #   currentTasks <- input$tasks[1]
+    #   print(length(currentTasks[1]))
+    # }
+    # 
+    # print(length(as.vector(input$tasks)))
+    
+    # for(z in c(1:nrow(testTable))){
+    #   monthTotals <- c()
+    #   for(u in c(1:length(monthValues))){
+    #     currentMonthTotal <- 0
+    #     currentLine <- testTable[z ,grepl( monthValues[u] , names(testTable) )]
+    #     currentMonthTotal <- sum(as.numeric(currentLine[grepl('-',currentLine) == FALSE]))
+    #     monthTotals <- c(monthTotals, currentMonthTotal)
+    #   }
+    #   exportTable <- c(exportTable, c(testTable[z,'ID'],monthTotals))
+    # }
+    # 
+    # print(count)
+    # monthDT <- data.frame(matrix(exportTable, ncol = 13, byrow = TRUE), stringsAsFactors = FALSE)
+    # print(monthDT[1:30,])
+    
     
     data <- mergedTable
     if (input$allocationFlag != "All") {
@@ -209,7 +253,7 @@ shinyServer(function(input, output,session) {
     data
     },
     selection = list(mode="single", target="cell"),
-    options=list(columnDefs = list(list(visible=FALSE, targets=c(7,20:31))))) %>% 
+    options=list(columnDefs = list(list(visible=FALSE, targets=c(5,7,20:31))))) %>% 
            formatStyle(
               c("Spend (FTE)","Oct","Nov","Dec","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep"),
               textAlign = 'center'
@@ -372,12 +416,12 @@ getTaskNames <- function(sourceTable){
   
   for(x in c(1:length(tempTaskNames))){
     if(grepl("RFS",tempTaskNames[x])){
-      finalRFSNames <- c(finalRFSNames, substr(tempTaskNames[x],regexpr('RFS',tempTaskNames[x]),regexpr('LB',tempTaskNames[x])-2))
+      finalRFSNames <- c(finalRFSNames, substr(tempTaskNames[x],regexpr('RFS',tempTaskNames[x]),regexpr('RFS',tempTaskNames[x])+5))
     }else{
       finalTaskNames <- c(finalTaskNames, substr(tempTaskNames[x],regexpr('Task',tempTaskNames[x]),regexpr('LB',tempTaskNames[x])-2))
     }
   }
-  return(c(sort(unique(finalRFSNames)),sort(unique(finalTaskNames))))
+  return(c(sort(unique(finalTaskNames)),sort(unique(finalRFSNames))))
 }
 
 purgeEmptyColumns <- function(sourceTable){
@@ -435,28 +479,7 @@ getMonthTotals <- function(sourceTable){
       taskVector <- c(taskVector,'')
     }
   }
-  print(names(sourceTable))
-  print(taskNames)
-  # print('Months')
-  # print((monthVector))
-  print('Tasks')
-  print(taskVector)
-  
-  
-  # for(z in c(1:nrow(sourceTable))){
-  #   monthTotals <- c()
-  #   for(u in c(1:length(monthValues))){
-  #     currentMonthTotal <- 0
-  #     for(h in c(1:length(taskNames))){
-  #       currentLine <- sourceTable[z ,grepl( monthValues[u] , names(sourceTable) ) & grepl( taskNames[h] , names(sourceTable) ) ]
-  #       currentMonthTotal <- currentMonthTotal + sum(as.numeric(currentLine[grepl('-',currentLine) == FALSE]))
-  #       count <- count + 1
-  #     }
-  #     monthTotals <- c(monthTotals, currentMonthTotal)
-  #   }
-  #   exportTable <- c(exportTable, c(sourceTable[z,'ID'],monthTotals))
-  # }
-  
+
   for(z in c(1:nrow(sourceTable))){
     monthTotals <- c()
     for(u in c(1:length(monthValues))){
@@ -477,3 +500,30 @@ getMonthTotals <- function(sourceTable){
   
   return(monthDT)
 }
+
+importFutureRFS <- function(rfsTable){
+  #Purge unnecessary columns
+  rfsTable <- rfsTable[,c(1:7,18:ncol(rfsTable))]
+  rfsData <- c()
+  for(x in 1:nrow(rfsTable)){
+    tempID <- paste('RFS10','-',as.character(x),sep='')
+    tempLcat <- rfsTable[x,6]
+    
+  }
+  print(rfsTable)
+}
+
+# vectorizeData <- function(unformattedTable){
+#   print(names(unformattedTable))
+#   for(x in 1:nrow(unformattedTable)){
+#     currentID <- unformattedTable[x,]$ID
+#     for(y in 1:ncol(unformattedTable)){
+#       
+#     }
+#     # print(currentID)
+#     # if(is.null(unformattedTable[x,]$ID) == FALSE){
+#     #   currentID <- unformattedTable[x,]$ID
+#     #   
+#     # }
+#   }
+# }
