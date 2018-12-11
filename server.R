@@ -2,15 +2,18 @@ shinyServer(function(input, output,session) {
   # Change the below commented code if the working directory is a different folder from the current folder
   # setwd("C:/Users/Kyle/Documents/CDM/R Testing/Allocation/cdm-allocation")
   
-  # Import txt file of the most recent spend plan
-  rawDataSet <- read.table("1127spendPlan.txt", sep = "\t", header = TRUE, fill = TRUE, stringsAsFactors=FALSE)
-  
+  # Import txt file of the most recent spend plan and task breakdown
+  rawDataSet <- read.table("1210spendPlan.txt", sep = "\t", header = TRUE, fill = TRUE, stringsAsFactors=FALSE)
+  taskBreakdown <- read.table("task-breakdown.txt", sep = "\t", header = TRUE, fill = TRUE, stringsAsFactors=FALSE)
+  names(taskBreakdown) <- c('Task Order','Task/RFS','Title','Task Lead','PBS Support')
+  print(names(taskBreakdown))
+  taskDT <- data.frame(matrix(taskBreakdown, ncol = 5), stringsAsFactors = FALSE)
   
   # Rename 'Role' column to LCAT as per stakeholder specification
   names(rawDataSet)[names(rawDataSet) == "Role"] <- "LCAT"
   
   # Import more accurate Functional Roles from the Staffing Matrix subset
-  functionalRoleMapping <- read.table("cdm-staffing-matrix.txt", sep = "\t", header = TRUE, fill = TRUE, stringsAsFactors=FALSE)
+  functionalRoleMapping <- read.table("cdm-staffing-matrix-1211.txt", sep = "\t", header = TRUE, fill = TRUE, stringsAsFactors=FALSE)
   names(functionalRoleMapping)[names(functionalRoleMapping) == "Functional.Role"] <- "Functional Role"
   names(functionalRoleMapping)[1] <- 'ID'
 
@@ -39,8 +42,8 @@ shinyServer(function(input, output,session) {
     updateSelectizeInput(session, 'tasks', choices = c('All',getTaskNames(rawDataSet)), server = TRUE, selected = 'All')
     updateSelectInput(session = session, inputId = "Function", choices = getFunctionalRoles(functionalRoleMapping), selected = 'All')
     updateSelectInput(session = session, inputId = "lcat", choices = getLCATs(rawDataSet$LCAT), selected = 'All')
-    updateSelectInput(session = session, inputId = "monthOfInterest", choices = c('N/A','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct'), selected = 'N/A')
-    updateSelectInput(session = session, inputId = "allocationFlag", choices = c('All','Over (>120%)','Over (100-120%)','At (80-100%)','Under (1-80%)'), selected = 'All')
+    updateSelectInput(session = session, inputId = "monthOfInterest", choices = c('N/A','Dec','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov'), selected = 'N/A')
+    updateSelectInput(session = session, inputId = "allocationFlag", choices = c('All','Over (>105%)','At (80-105%)','Under (1-80%)'), selected = 'All')
   })  
   
   observeEvent(input$resetAll, {
@@ -53,13 +56,11 @@ shinyServer(function(input, output,session) {
     updateSelectInput(session = session, inputId = "allocationFlag", selected = 'All')
   })
   
-  output$tbl <- renderDataTable( iris, options = list(lengthChange = FALSE))
-  
-  output$summaryTable <- DT::renderDataTable(datatable({
+  summaryTable <- reactive({
     #Pull in full data set
     filteredDataTable <- rawDataSet
     essentialColumns <- names(filteredDataTable)[1:5]
-  
+    
     #Get month values from data set
     monthValues <- c()
     for (x in names(filteredDataTable[ ,grepl( "Mo.Hours" , names(filteredDataTable) ) ])){
@@ -68,7 +69,7 @@ shinyServer(function(input, output,session) {
     
     #Removes Month Total columns from data set.  Those were only valuable for their headers.
     filteredDataTable <- filteredDataTable[ , !grepl( "Mo.Hours" , names(filteredDataTable) ) ]
-
+    
     #Ability to filter by Delta and Bravo
     if (input$team != "All") {
       if(input$team == 'Bravo'){
@@ -111,7 +112,7 @@ shinyServer(function(input, output,session) {
     
     #Final table assembly
     monthDT <- data.frame(matrix(exportTable, ncol = 14, byrow = TRUE), stringsAsFactors = FALSE)
-    monthLabels <- c('Nov','Dec','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct')
+    monthLabels <- c('Dec','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov')
     for(u in 1:length(monthLabels)){
       monthLabels[u] <- paste(monthLabels[u],' (',monthlyAllocations[u],')',sep = '')
     }
@@ -165,23 +166,25 @@ shinyServer(function(input, output,session) {
     if (input$monthOfInterest != 'N/A' && input$allocationFlag != 'All') {
       currentColumn <- monthLabels[grepl(input$monthOfInterest,monthLabels)]
       currentAllocation <- as.numeric(substring(monthLabels[grepl(input$monthOfInterest,monthLabels)],6,8))
-      if(input$allocationFlag == 'Over (>120%)'){
-        finalTable <- finalTable[finalTable[[currentColumn]] >= currentAllocation*1.2,]
-      } else if(input$allocationFlag == 'Over (100-120%)'){
-        tempTable <- finalTable[finalTable[[currentColumn]] >= currentAllocation,]
-        finalTable <- tempTable[tempTable[[currentColumn]] <= currentAllocation*1.2,]
-      }else if(input$allocationFlag == 'At (80-100%)'){
+      if(input$allocationFlag == 'Over (>105%)'){
+        finalTable <- finalTable[finalTable[[currentColumn]] >= currentAllocation*1.05,]
+      }else if(input$allocationFlag == 'At (80-105%)'){
         tempTable <- finalTable[finalTable[[currentColumn]] >= currentAllocation*0.8,]
-        finalTable <- tempTable[tempTable[[currentColumn]] <= currentAllocation,]
+        finalTable <- tempTable[tempTable[[currentColumn]] <= currentAllocation*1.05,]
       }else if(input$allocationFlag == 'Under (1-80%)'){
         tempTable <- finalTable[finalTable[[currentColumn]] > 0,]
         finalTable <- tempTable[tempTable[[currentColumn]] <= currentAllocation*0.8,]
       }
     }
     
-    finalTable
-    },
-    selection = list(mode="single", target="cell")
+    return(finalTable)
+  })
+  
+  output$allocationTable <- DT::renderDataTable(server = FALSE, datatable(
+    summaryTable(),
+    selection = list(mode="single", target="cell"),
+    extensions = 'Buttons', options = list(
+      buttons = 'excel',dom = 'Bfrtipl')
     # options=list(columnDefs = list(list(visible=FALSE, targets=c(5,7,20:31))))
     ) 
            # %>% 
@@ -239,125 +242,14 @@ shinyServer(function(input, output,session) {
            # )
   )
   
+  output$taskTable <- DT::renderDataTable(datatable(taskBreakdown, options=list(dom = 't', pageLength = 15), rownames = FALSE))
+  
+  
   output$filteredTable <- DT::renderDataTable(datatable({
-    print(input$summaryTable_rows)
-    filteredDataTable <- rawDataSet
-    essentialColumns <- names(filteredDataTable)[1:5]
 
-    #Get month values from data set
-    monthValues <- c()
-    for (x in names(filteredDataTable[ ,grepl( "Mo.Hours" , names(filteredDataTable) ) ])){
-      monthValues <- c(monthValues,substring(x,10,14))
-    }
+    userSelection <- input$allocationTable_cells_selected
 
-    #Remove extraneous data from data set
-    filteredDataTable <- filteredDataTable[ , !grepl( "Mo.Hours" , names(filteredDataTable) ) ]
-
-    exportTable <- c()
-
-
-    #Ability to filter out Delta and Bravo
-    if (input$team != "All") {
-      if(input$team == 'Bravo'){
-        filteredDataTable <- filteredDataTable[,grepl('DEF.D',names(filteredDataTable)) == FALSE]
-      }else{
-        filteredDataTable <- filteredDataTable[,grepl('DEF.B',names(filteredDataTable)) == FALSE]
-      }
-    }
-
-    #Vector to preserve personnel info
-    taskNames <- getTaskNames(filteredDataTable)
-
-    columnsToKeep <- c(essentialColumns)
-    if(is.na(length(input$tasks))==FALSE && !('All' %in% input$tasks)){
-      for(n in c(1:length(input$tasks))){
-        if(grepl('RFS',input$tasks[n])){
-          columnsToKeep <- c(columnsToKeep,names(filteredDataTable)[grepl(input$tasks[n],names(filteredDataTable))])
-        } else{
-          tempColumns <- names(filteredDataTable)[grepl(input$tasks[n],names(filteredDataTable))]
-          columnsToKeep <- c(columnsToKeep, tempColumns[grepl('RFS',tempColumns) == FALSE])
-        }
-      }
-      filteredDataTable <- filteredDataTable[,columnsToKeep]
-    }
-
-    personnelDT <- filteredDataTable[,essentialColumns]
-    for(z in c(1:nrow(filteredDataTable))){
-      monthTotals <- c()
-      for(u in c(1:length(monthValues))){
-        currentMonthTotal <- 0
-        currentLine <- filteredDataTable[z ,grepl( monthValues[u] , names(filteredDataTable) )]
-        currentMonthTotal <- sum(as.numeric(currentLine[grepl('-',currentLine) == FALSE]))
-        monthTotals <- c(monthTotals, currentMonthTotal)
-      }
-      exportTable <- c(exportTable, c(filteredDataTable[z,'ID'],round(sum(monthTotals)/2080,digits=2),monthTotals))
-    }
-
-    monthDT <- data.frame(matrix(exportTable, ncol = 14, byrow = TRUE), stringsAsFactors = FALSE)
-    monthLabels <- c('Nov','Dec','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct')
-    for(u in 1:length(monthLabels)){
-      monthLabels[u] <- paste(monthLabels[u],' (',monthlyAllocations[u],')',sep = '')
-    }
-    names(monthDT) <- c('ID','FTE',monthLabels)
-
-    finalTable <- merge(merge(personnelDT,monthDT,by="ID"),functionalRoleMapping,all.x = TRUE,all.y = FALSE, by='ID')
-
-    finalColumnOrder <- c('ID','Resource','Functional Role','LCAT','FTE',monthLabels)
-    finalTable <- finalTable[,finalColumnOrder]
-
-    for(c in 5:ncol(finalTable)){
-      finalTable[,c] = as.numeric(finalTable[,c])
-    }
-
-    if ((input$Function != "All") && (length(input$Function))){
-      if (input$Function != "Other") {
-        finalTable <- finalTable[which(finalTable$"Functional Role" == input$Function), ]
-      } else{
-        listOfFunctions <- getFunctionalRoles(functionalRoleMapping)
-        finalTable <- finalTable[!(finalTable$"Functional Role" %in% listOfFunctions),]
-      }
-    }
-
-    if (input$lcat != "All") {
-      if (input$lcat != "Other") {
-        finalTable <- finalTable[finalTable$LCAT == input$lcat,]
-      } else{
-        listOfLcats <- sort(c('Other','Administration/Clerical', 'Applications Developer', 'Applications Systems Analyst', 'Business Process Consultant',
-                              'Business Systems Analyst', 'Chief Information Security Officer', 'Computer Forensic & Intrusion Analyst',
-                              'Configuration Management Specialist', 'Data Architect', 'Database Specialist', 'Enterprise Architect',
-                              'Financial Analyst', 'Hardware Engineer', 'Help Desk Specialist', 'Information Assurance/Security Specialist',
-                              'Network Specialist', 'Program Manager', 'Project Manager', 'Quality Assurance Specialist', 'Subject Matter Expert',
-                              'Technical Writer', 'Test Engineer', 'Training Specialist', 'Systems Engineer'))
-        finalTable <- finalTable[!(finalTable$LCAT %in% listOfLcats),]
-      }
-    }
-    if (input$filledStatus != "All") {
-      if (input$filledStatus == "Filled") {
-        finalTable <- finalTable[is.na(as.integer(finalTable$ID)) == FALSE,]
-      }else if (input$filledStatus == "Unfilled") {
-        finalTable <- finalTable[is.na(as.integer(finalTable$ID)) == TRUE,]
-      }
-    }
-    if (input$monthOfInterest != 'N/A' && input$allocationFlag != 'All') {
-      currentColumn <- monthLabels[grepl(input$monthOfInterest,monthLabels)]
-      currentAllocation <- as.numeric(substring(monthLabels[grepl(input$monthOfInterest,monthLabels)],6,8))
-      if(input$allocationFlag == 'Over (>120%)'){
-        finalTable <- finalTable[finalTable[[currentColumn]] >= currentAllocation*1.2,]
-      } else if(input$allocationFlag == 'Over (100-120%)'){
-        tempTable <- finalTable[finalTable[[currentColumn]] >= currentAllocation,]
-        finalTable <- tempTable[tempTable[[currentColumn]] <= currentAllocation*1.2,]
-      }else if(input$allocationFlag == 'At (80-100%)'){
-        tempTable <- finalTable[finalTable[[currentColumn]] >= currentAllocation*0.8,]
-        finalTable <- tempTable[tempTable[[currentColumn]] <= currentAllocation,]
-      }else if(input$allocationFlag == 'Under (1-80%)'){
-        tempTable <- finalTable[finalTable[[currentColumn]] > 0,]
-        finalTable <- tempTable[tempTable[[currentColumn]] <= currentAllocation*0.8,]
-      }
-    }
-
-    userSelection <- input$summaryTable_cells_selected
-
-    data <- finalTable
+    data <- summaryTable()
 
     if (length(userSelection)) {
       data <- data[userSelection[1],]
@@ -396,18 +288,16 @@ shinyServer(function(input, output,session) {
         tempDTotal <- 0
         temp2DTotal <- 0
         tempTaskValues <- c()
-
+        print(names(userSelectedDataTable))
         for(q in c(1:ncol(userSelectedDataTable))){
-          if(grepl(".B.",names(userSelectedDataTable)[q]) && isFALSE(grepl('total',tolower(names(userSelectedDataTable)[q])))){
+          if(grepl("DEF.B",names(userSelectedDataTable)[q]) && isFALSE(grepl('total',tolower(names(userSelectedDataTable)[q])))){
             tempBTotal <- tempBTotal + as.numeric(userSelectedDataTable[1,q])
             tempColNames2 <- c(tempColNames2,names(userSelectedDataTable)[q])
             tempTaskValues <- c(tempTaskValues,as.numeric(userSelectedDataTable[1,q]))
-          } else if(grepl(".D.",names(userSelectedDataTable)[q]) && isFALSE(grepl('total',tolower(names(userSelectedDataTable)[q])))){
+          } else if(grepl("DEF.D",names(userSelectedDataTable)[q]) && isFALSE(grepl('total',tolower(names(userSelectedDataTable)[q])))){
             tempDTotal <- tempDTotal + as.numeric(userSelectedDataTable[1,q])
             tempColNames2 <- c(tempColNames2,names(userSelectedDataTable)[q])
             tempTaskValues <- c(tempTaskValues,as.numeric(userSelectedDataTable[1,q]))
-          } else if(grepl(".2D.",names(userSelectedDataTable)[q])){
-            temp2DTotal <- temp2DTotal + as.numeric(userSelectedDataTable[1,q])
           }
         }
 
@@ -422,7 +312,15 @@ shinyServer(function(input, output,session) {
         return(datatable({finalFilteredTable},
                          options=list(dom = 't', columnDefs = list(list(className = 'dt-center', targets = 6:ncol(finalFilteredTable)),
                                                                    list(visible=FALSE, targets=c(1:5,9))))))
+      }else{
+        errorMessage <- data.frame(matrix(c('Please return to the main screen and select a valid month value.'),nrow = 1))
+        names(errorMessage)[1] <- 'Note:'
+        return(datatable(errorMessage, options=list(dom = 't'), rownames = FALSE))
       }
+    }else{
+      errorMessage <- data.frame(matrix(c('Please return to the main screen and select a valid month value.'),nrow = 1))
+      names(errorMessage)[1] <- 'Note:'
+      return(datatable(errorMessage, options=list(dom = 't'), rownames = FALSE))
     }
 
     return()
@@ -430,15 +328,12 @@ shinyServer(function(input, output,session) {
   }
   )
   )
-  # output$downloadData <- downloadHandler(
-  #   filename <- 'test',
-  #   content = function(file) {
-  #     write.csv(output$summaryTable, file, row.names = FALSE)
-  #   }
-  # )
-
+  
+  
 }
 )
+
+
 
 getTaskNames <- function(sourceTable){
   tempTaskNames <- names(sourceTable[ ,grepl("Task",names(sourceTable)) | grepl("RFS",names(sourceTable)) | grepl("CLIN",names(sourceTable)) ])
@@ -447,12 +342,12 @@ getTaskNames <- function(sourceTable){
   
   for(x in c(1:length(tempTaskNames))){
     if(grepl("RFS",tempTaskNames[x])){
-      finalRFSNames <- c(finalRFSNames, substr(tempTaskNames[x],regexpr('RFS',tempTaskNames[x]),regexpr('RFS',tempTaskNames[x])+5))
+      finalRFSNames <- c(finalRFSNames, substr(tempTaskNames[x],1,regexpr('RFS',tempTaskNames[x])+5))
     }else{
-      finalTaskNames <- c(finalTaskNames, substr(tempTaskNames[x],regexpr('Task',tempTaskNames[x]),regexpr('LB',tempTaskNames[x])-2))
+      finalTaskNames <- c(finalTaskNames, substr(tempTaskNames[x],1,regexpr('LB',tempTaskNames[x])-2))
     }
   }
-  return(c(sort(unique(finalTaskNames)),sort(unique(finalRFSNames))))
+  return(sort(unique(c(finalTaskNames,finalRFSNames))))
 }
 
 # Function to clean data set.  Reduces number of columns from 600 to 100

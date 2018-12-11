@@ -1,0 +1,16 @@
+Task Order	Task/RFS	Title	Task Lead	PBS Support
+Delta	Task 1	Provide Project Management	Erica Banks	
+Delta	Task 2	Support CDM Solution and CDM Dashboard	Patrick Mulvaney	
+Delta	Task 3	Integrate New CDM Capabilities	Adam Langford	
+Delta	Task 4	Expanded Agency Services	Michele Buisch	
+Delta	Task 5	Surge Cybersecurity Critical Incident Support	Humberto Irizarry	
+Bravo	Task 1	PMO Support	Shawn Chon/Molley Regan	Mendeep Sekhon
+Bravo	Task 2	CDM Solution and Dashboard Support	Jason DeShano/Nik Reineke	Claire Wooden
+Bravo	RFS001	Ongoing Assessment	Colin Keating	Acasha Klewe
+Bravo	RFS004	Phase 1 Gap Fill and CSM	Kara Dolan	Acasha Klewe
+Bravo	RFS005	USDA O&M Spt and FS Training	Andy Rodnan	Acasha Klewe
+Bravo	RFS006	USDA Null Device	Andy Rodnan	Acasha Klewe
+Bravo	RFS007	Cloud and Mobile Discovery	John Neville	Claire Wooden
+Bravo	RFS008	DIO EVSS	Sean Stanard	Tim Tran
+Bravo	RFS009	DIO SIEM Cost Planning	Sean Stanard	Tim Tran
+Bravo	RFS010	Department of Energy	Keith Bunch	
