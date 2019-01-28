@@ -1,0 +1,366 @@
+Employee ID	Functional Role
+552216	Agency & Test Integration Engineer
+540146	Agency Lead
+565937	Agency Lead
+584501	Agency Lead
+576513	Agency Lead
+587985	Agency Lead
+589525	Agency Lead
+589679	Agency Lead
+590191	Agency Lead
+592288	Agency Lead
+594822	Agency Lead
+595900	Agency Lead
+599683	Agency Lead
+514390	Agency Lead
+602567	Integration Lead
+599475	Application Systems Analyst
+585271	Application Systems Analyst
+599661	Application Systems Analyst
+529319	Business Operations Analyst
+582337	Business Operations Lead
+539420	Business Operations Lead
+834006	Capability Engineer
+547717	Capability Engineer
+585452	Capability Engineer
+834743	Capability Engineer
+835609	Capability Engineer
+587375	Capability Engineer
+835947	Capability Engineer
+589666	Capability Engineer
+601257	Capability Engineer
+836747	Capability Engineer
+590000	Capability Engineer
+591080	Capability Engineer
+838060	Capability Engineer
+553905	Capability Engineer
+595341	Capability Engineer
+839232	Capability Engineer
+587561	Capability Engineer
+599856	Capability Engineer
+599853	Capability Engineer
+600115	Capability Engineer
+571615	Capability Engineer
+600094	Capability Engineer
+600116	Capability Engineer
+600262	Capability Engineer
+600099	Capability Engineer
+600291	Capability Engineer
+600423	Capability Engineer
+600539	Capability Engineer
+600768	Capability Engineer
+597719	Capability Engineer
+600732	Capability Engineer
+599421	Capability Engineer
+600762	Capability Engineer
+591254	Capability Engineer
+601173	Capability Engineer
+584601	Capability Engineer
+601662	Capability Engineer
+601177	Capability Engineer
+584034	Change and Configuration Management
+527970	Chief Engineer
+596527	Cloud and Mobile Capability Lead
+602342	Capability Engineer
+600027	Communications Lead
+591149	CRED Lead
+500296	Cyber Architect
+023500	Cyber Architect
+503115	Cyber Security Test Lead
+602337	Data Integrity Support
+590506	Data Presentation Capability Lead
+586194	Data Protection Capability Lead
+572349	Data Quality Lead
+581165	Delivery Manager
+587502	Delivery Manager
+569738	Demand Modeling
+593644	Deployment Coordinator
+544818	Deputy Agency Lead
+551594	Deputy Agency Lead
+585921	Deputy Agency Lead
+600219	Deputy Agency Lead
+595823	Deputy RFS Execution Lead
+600538	Deputy IAM Lead
+598598	Deputy Integration Lead
+501689	Deputy PM
+514131	Deputy PM
+535996	Deputy Program Manager
+580230	Deputy RFS Execution Lead
+524759	Deputy SA Manager
+592838	Deputy SIO Manager
+582013	Deputy Testing Lead
+540708	DI Architect
+585923	DI Data Analyst
+537572	DI Developer
+592855	DI Developer
+835812	DI Developer
+574421	DI Developer
+599738	DI Developer
+600604	DI Developer
+573435	DI Developer
+569486	DI Development Lead
+591842	DI Development Lead
+571375	DI Field Engineer
+599480	DI Field Engineer
+589087	DI Field Engineering Lead
+544848	DI Lead
+560257	DI Technical Lead
+524662	DI Tester
+549592	DI Tester
+599478	DI Tester
+571336	Endpoint Security Capability Lead
+582339	Engineering Capability Lead
+599690	Engineering Resource Allocation Manager
+593942	Finance Manager
+505684	Finance Manager
+602401	Finance Manager
+535831	Financial and Forecast Lead
+505564	Governance & Training Lead
+586932	Governance Analyst
+600736	Governance Analyst
+600725	Hardware Engineer
+596726	IA Engineer
+529273	IA Engineer
+597706	IA Engineer
+601402	IA Engineer
+580921	IA Engineer - DOI/DOE 
+561418	IA Lead 
+517113	IA Lead 
+588475	IA Lead 
+580015	IA Security Lead
+503116	IA SME
+591152	IAM Architect
+590804	IAM Capability Lead
+589738	IAM Capability Owner
+600734	IAM PM
+601689	IAM PM
+599604	Incident Response Analyst
+600737	Incident Response Lead
+595855	Incident Support
+596600	Incident Support
+600772	Information Assurance/Security Specialist
+585044	Integration Lead
+587515	Integration Lead
+586349	Integration Lead
+559820	Integration Lead
+578765	Integration Lead
+592541	Integration Lead
+582803	Integration Lead
+836662	IOS Engineer
+838071	IOS Engineer
+839016	IOS Engineer
+599715	IOS Engineer
+841023	IOS Engineer
+582770	IOS Engineer - BF
+835810	IOS Engineer - BF
+587381	IOS Engineer - Splunk
+588860	IOS Engineer - Splunk
+837923	IOS Engineering Lead
+582850	IOS Manager
+592270	IOS Manager
+602715	IOS Engineer
+596172	IOS Engineer
+535638	ITSM Lead
+566041	Lab Architect
+546724	Lab Manager
+601439	Lab Support
+601567	Lab Support
+577496	Lab Support
+511852	Lead SIM
+565682	Lead SIM
+840932	Mobility Security Engineer
+584875	NAC Lead
+834126	NAC Lead
+558860	Network Specialist
+565223	Network Specialist
+571596	Network Specialist
+592266	Network Specialist
+549136	Network Specialist
+595958	Network Specialist
+540321	Network Specialist
+526270	Ongoing Assessment Lead
+539227	Ongoing Assessment Manager
+510911	PBS Lead
+510796	PBS Lead
+528649	PBS Support
+582994	PBS Support
+550366	PBS Support
+545111	PBS Support
+590146	Perimeter Defense Capability Lead
+590179	Procurement Analyst
+587290	Procurement Lead
+577754	Product Owner
+547825	Product Owner
+543684	Product Owner Lead
+560435	Product Owners Lead
+579382	Program Manager
+21659	Program Manager
+572059	Project Coordinator
+586680	Project Coordinator
+589661	Project Coordinator
+589741	Project Coordinator
+538920	Project Coordinator
+570312	Project Coordinator
+599600	Project Coordinator
+600867	Project Coordinator
+575139	Project Coordinator
+601400	Project Coordinator
+595518	Project Coordinator
+599323	Project Coordinator
+527081	Project Coordinator Lead
+524880	Project Coordinator Lead
+527928	Project Expediter
+602336	Technical Writer
+574738	Quality Assurance Metrics Lead
+020726	Quality Lead
+519033	Quality Lead
+581145	Requirements Analyst
+580919	Requirements Analyst
+553334	Requirements Analyst
+593002	Requirements Analyst
+582772	Requirements Analyst
+602433	Requirements Analyst
+602675	Requirements Analyst
+559026	Requirements Lead
+590662	Resource Lead
+601841	Resource Support
+581658	RFS Execution Lead
+523042	RFS Execution Lead
+591974	RFS Execution Lead
+600868	RFS Execution Oversight
+602571	RFS Execution Lead
+599094	RFS OAS PM
+544094	RFS OAS PM
+577147	RFS Portfolio Manager
+505987	RFS Response Lead
+558031	RFS Response Lead
+598267	RFS Support
+602335	RFS Support
+598548	RFS Support
+570148	SA Manager
+520635	SA Manager 
+833317	Scheduler
+523279	SDD Manager
+579920	SDD Manager
+578947	Service Desk Support
+592220	ServiceNow Capability Lead
+840916	ServiceNow Developer
+600517	ServiceNow Developer
+555225	ServiceNow Engineer
+590869	ServiceNow Engineer
+546073	SIO Manager
+539274	SME
+531907	Solution Architect
+582041	Solution Architect
+585672	Solution Architect
+586791	Solution Architect
+554288	Solution Architect
+596696	Solution Architect
+595674	Solution Architect
+599940	Solution Architect
+601549	Solution Architect
+581524	Solution Architecture Lead
+601550	Solution Architecture Support
+545412	Solutions Architect
+584611	Solutions Architect
+595592	Splunk Engineer
+549477	Subcontracts
+567112	Subject Matter Expert
+540202	Subject Matter Expert
+590145	Support Desk Lead
+840426	Capability Engineer
+595312	Systems Test & Integration Engineer
+577606	Systems Test & Integration Engineer
+600091	Systems Test & Integration Engineer
+589670	Systems Test & Integration Engineer
+602114	Systems Test & Integration Engineer
+552721	Talent Management Lead
+599866	Talent Acquisition and Sourcing
+587199	Technical Test Lead
+592981	Technical Test Lead
+000703	Technical Writer
+026252	Technical Writer
+599726	Technical Writer
+531727	Technical Writer
+565893	Technical Writer
+554437	Tester
+599455	Threat Analyst
+572678	Training Lead
+520726	Transition-In Support 
+590934	Vulnerability Management Lead
+600194	
+602109	
+600984	
+579604	IOS Engineer
+599961	Agency Lead
+840974	Capability Engineer
+600731	Capability Engineer
+840972	Capability Engineer
+601815	Capability Engineer
+840973	Capability Engineer
+600367	Capability Engineer
+840971	Capability Engineer
+524855	Capability Engineer
+TAK003	Capability Engineer
+586415	Communications Lead
+840425	CRED Lead
+576311	Cyber Security Test Analyst
+502317	Deputy Agency Lead
+573861	Deputy Integration Lead
+602001	DI Tester
+600363	Digital Engineer
+600465	"Engineering Resource Allocation Manager
+(Project Coordinator)"
+545660	Governance Analyst
+528359	Governance Analyst
+583665	IA Engineer
+600326	IA Engineer
+TBD56	IA Engineer
+602685	IA Engineer
+601881	IDAM and PAM Capability Lead
+601401	Information Security Analyst
+593286	Information Security Analyst
+601885	Integration Lead
+602843	Integration Lead
+568490	Integration Lead
+555422	Integration Lead
+601583	Lab Support
+566464	NAC Engineer
+600451	NAC Lead
+541513	PBS Support
+577283	Phantom Engineer
+599640	Phantom Engineer
+585199	Product Owner
+524136	Project Coordination Support
+589073	Project Coordinator
+588657	Project Coordinator
+599967	Project Coordinator
+568801	Project Coordinator
+513135	Project Coordinator
+591548	Project Coordinator
+601745	Project Coordinator
+601842	Project Coordinator/Scheduler
+590363	Project Expeditor
+602338	Deputy Agency Lead
+591495	Requirements Analyst
+563360	Requirements Analyst
+586888	Requirements Analyst
+559755	Resource Lead
+579341	Resource Support
+600801	Resource Support 
+512887	RFS Portfolio Manager
+601838	RFS Support
+600883	RFS Support
+601926	Solution Architect
+555553	Solution Architect
+536797	Solutions Architect
+593827	Subject Matter Expert
+574806	Systems Test & Integration Engineer
+600258	Tech Writer
+536508	Technical Writer
+506573	Technical Writer
+835809	Training Lead
+5855282	Transition-In Lead
+600979	Vulnerability Management Analyst
+599804	
+522544	SELC Lead

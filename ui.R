@@ -1,13 +1,13 @@
 library(DT)
 library(shiny)
-# library(shinyBS)
+library(shinyBS)
 
 navbarPage("Booz | Allen | Hamilton",
  tabPanel("Allocation Model",
           fluidPage(
             fluidRow(
               column(width = 2,offset = 10, 
-                     h4('Data as of: 12/10/2018', align = 'right')
+                     h4('Data as of: 01/25/2019', align = 'right')
               )
             ),
             fluidRow(
@@ -58,7 +58,7 @@ navbarPage("Booz | Allen | Hamilton",
           )
 
  ),
- tabPanel("Aggregate View"
+ tabPanel("Forecasting View"
  ),
  tabPanel("Hire Forecast"
  ),

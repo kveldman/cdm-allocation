@@ -3,17 +3,17 @@ shinyServer(function(input, output,session) {
   # setwd("C:/Users/Kyle/Documents/CDM/R Testing/Allocation/cdm-allocation")
   
   # Import txt file of the most recent spend plan and task breakdown
-  rawDataSet <- read.table("1210spendPlan.txt", sep = "\t", header = TRUE, fill = TRUE, stringsAsFactors=FALSE)
+  rawDataSet <- read.table("0124spendplan.txt", sep = "\t", header = TRUE, fill = TRUE, stringsAsFactors=FALSE)
   taskBreakdown <- read.table("task-breakdown.txt", sep = "\t", header = TRUE, fill = TRUE, stringsAsFactors=FALSE)
   names(taskBreakdown) <- c('Task Order','Task/RFS','Title','Task Lead','PBS Support')
-  print(names(taskBreakdown))
+  
   taskDT <- data.frame(matrix(taskBreakdown, ncol = 5), stringsAsFactors = FALSE)
   
   # Rename 'Role' column to LCAT as per stakeholder specification
   names(rawDataSet)[names(rawDataSet) == "Role"] <- "LCAT"
   
   # Import more accurate Functional Roles from the Staffing Matrix subset
-  functionalRoleMapping <- read.table("cdm-staffing-matrix-1211.txt", sep = "\t", header = TRUE, fill = TRUE, stringsAsFactors=FALSE)
+  functionalRoleMapping <- read.table("cdm-staffing-matrix-0124.txt", sep = "\t", header = TRUE, fill = TRUE, stringsAsFactors=FALSE)
   names(functionalRoleMapping)[names(functionalRoleMapping) == "Functional.Role"] <- "Functional Role"
   names(functionalRoleMapping)[1] <- 'ID'
 
@@ -42,7 +42,7 @@ shinyServer(function(input, output,session) {
     updateSelectizeInput(session, 'tasks', choices = c('All',getTaskNames(rawDataSet)), server = TRUE, selected = 'All')
     updateSelectInput(session = session, inputId = "Function", choices = getFunctionalRoles(functionalRoleMapping), selected = 'All')
     updateSelectInput(session = session, inputId = "lcat", choices = getLCATs(rawDataSet$LCAT), selected = 'All')
-    updateSelectInput(session = session, inputId = "monthOfInterest", choices = c('N/A','Dec','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov'), selected = 'N/A')
+    updateSelectInput(session = session, inputId = "monthOfInterest", choices = c('N/A','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'), selected = 'N/A')
     updateSelectInput(session = session, inputId = "allocationFlag", choices = c('All','Over (>105%)','At (80-105%)','Under (1-80%)'), selected = 'All')
   })  
   
@@ -69,6 +69,32 @@ shinyServer(function(input, output,session) {
     
     #Removes Month Total columns from data set.  Those were only valuable for their headers.
     filteredDataTable <- filteredDataTable[ , !grepl( "Mo.Hours" , names(filteredDataTable) ) ]
+    
+    #Get month totals for allocation filters based on unaltered totals
+    unfilteredExportTable <- c()
+    for(z in c(1:nrow(filteredDataTable))){
+      unfilteredMonthTotals <- c()
+      for(u in c(1:length(monthValues))){
+        currentMonthTotal <- 0
+        currentLine <- filteredDataTable[z ,grepl( monthValues[u] , names(filteredDataTable) )]
+        currentMonthTotal <- sum(as.numeric(currentLine[grepl('-',currentLine) == FALSE]))
+        unfilteredMonthTotals <- c(unfilteredMonthTotals, currentMonthTotal)
+      }
+      unfilteredExportTable <- c(unfilteredExportTable, c(filteredDataTable[z,'ID'],round(sum(unfilteredMonthTotals)/2080,digits=2),unfilteredMonthTotals))
+    }
+    
+    #Final table assembly
+    unfilteredMonthDT <- data.frame(matrix(unfilteredExportTable, ncol = 14, byrow = TRUE), stringsAsFactors = FALSE)
+    monthLabels <- c('Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec')
+    for(u in 1:length(monthLabels)){
+      monthLabels[u] <- paste(monthLabels[u],' (',monthlyAllocations[u],')',sep = '')
+    }
+    names(unfilteredMonthDT) <- c('ID','FTE',monthLabels)
+    unfilteredMonthDT <- unfilteredMonthDT[unfilteredMonthDT$FTE>0,]
+    
+    for(x in 2:ncol(unfilteredMonthDT)){
+      unfilteredMonthDT[,x] = as.numeric(unfilteredMonthDT[,x])
+    }
     
     #Ability to filter by Delta and Bravo
     if (input$team != "All") {
@@ -112,11 +138,12 @@ shinyServer(function(input, output,session) {
     
     #Final table assembly
     monthDT <- data.frame(matrix(exportTable, ncol = 14, byrow = TRUE), stringsAsFactors = FALSE)
-    monthLabels <- c('Dec','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov')
+    monthLabels <- c('Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec')
     for(u in 1:length(monthLabels)){
       monthLabels[u] <- paste(monthLabels[u],' (',monthlyAllocations[u],')',sep = '')
     }
     names(monthDT) <- c('ID','FTE',monthLabels)
+    
     #Combines personnel info, corrected functional roles, and month aggregates
     finalTable <- merge(merge(personnelDT,monthDT,by="ID"),functionalRoleMapping,all.x = TRUE,all.y = FALSE, by='ID')
     finalColumnOrder <- c('ID','Resource','Functional Role','LCAT','FTE',monthLabels)
@@ -167,15 +194,18 @@ shinyServer(function(input, output,session) {
       currentColumn <- monthLabels[grepl(input$monthOfInterest,monthLabels)]
       currentAllocation <- as.numeric(substring(monthLabels[grepl(input$monthOfInterest,monthLabels)],6,8))
       if(input$allocationFlag == 'Over (>105%)'){
-        finalTable <- finalTable[finalTable[[currentColumn]] >= currentAllocation*1.05,]
+        unfilteredMonthDT <- unfilteredMonthDT[unfilteredMonthDT[[currentColumn]] >= currentAllocation*1.05,]
       }else if(input$allocationFlag == 'At (80-105%)'){
-        tempTable <- finalTable[finalTable[[currentColumn]] >= currentAllocation*0.8,]
-        finalTable <- tempTable[tempTable[[currentColumn]] <= currentAllocation*1.05,]
+        tempTable <- unfilteredMonthDT[unfilteredMonthDT[[currentColumn]] >= currentAllocation*0.8,]
+        unfilteredMonthDT <- tempTable[tempTable[[currentColumn]] <= currentAllocation*1.05,]
       }else if(input$allocationFlag == 'Under (1-80%)'){
-        tempTable <- finalTable[finalTable[[currentColumn]] > 0,]
-        finalTable <- tempTable[tempTable[[currentColumn]] <= currentAllocation*0.8,]
+        tempTable <- unfilteredMonthDT[unfilteredMonthDT[[currentColumn]] > 0,]
+        unfilteredMonthDT <- tempTable[tempTable[[currentColumn]] <= currentAllocation*0.8,]
       }
+      finalTable <- finalTable[finalTable$ID %in% unfilteredMonthDT$ID,]
     }
+    
+    finalTable <- finalTable[finalTable$FTE>0,]    
     
     return(finalTable)
   })
@@ -288,13 +318,13 @@ shinyServer(function(input, output,session) {
         tempDTotal <- 0
         temp2DTotal <- 0
         tempTaskValues <- c()
-        print(names(userSelectedDataTable))
+        
         for(q in c(1:ncol(userSelectedDataTable))){
-          if(grepl("DEF.B",names(userSelectedDataTable)[q]) && isFALSE(grepl('total',tolower(names(userSelectedDataTable)[q])))){
+          if(grepl("DEF.B",names(userSelectedDataTable)[q]) && (grepl('total',tolower(names(userSelectedDataTable)[q]))==FALSE)){
             tempBTotal <- tempBTotal + as.numeric(userSelectedDataTable[1,q])
             tempColNames2 <- c(tempColNames2,names(userSelectedDataTable)[q])
             tempTaskValues <- c(tempTaskValues,as.numeric(userSelectedDataTable[1,q]))
-          } else if(grepl("DEF.D",names(userSelectedDataTable)[q]) && isFALSE(grepl('total',tolower(names(userSelectedDataTable)[q])))){
+          } else if(grepl("DEF.D",names(userSelectedDataTable)[q]) && (grepl('total',tolower(names(userSelectedDataTable)[q]))==FALSE)){
             tempDTotal <- tempDTotal + as.numeric(userSelectedDataTable[1,q])
             tempColNames2 <- c(tempColNames2,names(userSelectedDataTable)[q])
             tempTaskValues <- c(tempTaskValues,as.numeric(userSelectedDataTable[1,q]))
@@ -367,30 +397,48 @@ purgeEmptyColumns <- function(sourceTable){
 }
 
 getFunctionalRoles <- function(staffingMatrixFunctionalRoles){
-  defaultFunctionalRoles <- c('Project Manager', 'Lead Systems Integration Manager', 'Cyber Architect', 'Chief Engineer', 
-  'RFS Lead (Ongoing Assessment Lead)', 'Deputy Program Manager', 'Executive Assistant', 'Finance Manager', 
-  'Market Liaison', 'Ongoing Assessment Lead', 'Ongoing Assessment Manager', 'Ongoing Assessment Support', 
-  'PBS Lead', 'PBS Support', 'Procurement Lead', 'Procurement Analyst', 'Project Coordinator/Scheduler', 
-  'Project Coordinator/Scheduler Lead', 'Project Expediter', 'Project Operations Lead', 'Quality Lead', 
-  'Quality Support', 'Resource Lead', 'Resource Support', 'RFS Portfolio Manager', 'RFS Response Lead', 
-  'RFS Support', 'SubKs', 'Tech Writer', 'Transition-In Manager', 'Transition-In Support', 'Delivery Manager', 
-  'Agency Lead', 'Data Integration Engineer', 'Data Integration Team Lead', 'Data Integration Tech Lead', 
-  'Lab Support', 'Products Lead', 'Product Owner', 'Requirements Lead', 'Requirements Analyst', 
-  'Solution Design and Development Manager', 'Solution Architect Lead', 'Solution Architect', 'Engineer', 
-  'Cloud and Mobile Capability Lead', 'Data Presentation Capability Engineer', 'Data Presentation Capability Lead', 
-  'Data Protection Capability Lead', 'Deputy SIO Manager', 'Endpoint Security Capability Lead', 
-  'Engineering Capability Lead', 'Engineering Resource Lead', 'IDAM and PAM Capability Lead', 
-  'Incident Lead', 'Integration Lead', 'IOS Engineer (Tool)', 'IOS Lead', 'IOS OPS Liaison', 'IOS Project Coordinator',
-  'ITSM Lead CSI', 'Lab Architect', 'Lab Manager', 'Lab Support', 'Perimeter Defense Capability Lead', 
-  'ITIL Process Lead', 'Resource Allocation Lead', 'ServiceNow Capability Lead', 'ServiceNow Developer', 
-  'ServiceNow Engineer', 'Solution Integration and Operations Manager', 'Agency & Test Integration Engineer', 
-  'Deputy Solution Assurance Manager', 'Governance/Training Lead', 'Governance Analyst', 
-  'Information Assurance Engineer', 'Information Assurance Lead', 'Information Assurance SME', 
-  'Incident Response Lead', 'Quality Assurance/Metrics Lead', 'Quality Assurance Support', 'Solution Assurance Manager', 
-  'Testing Lead', 'Test Engineer', 'Training Lead', 'Vulnerability Manager', 'Technical Writer', 'Automation Lead', 
-  'Cyber Operations Manager', 'Cyber Ops Team Lead', 'Cyber Tools Lead', 'Forensics Engineer', 
-  'Incident Response Team Lead', 'Intrusion Detection Analyst', 'IR Process Manager', 'Penetration Tester', 
-  'Project Coordinator2', 'SIEM Analyst', 'Threat Indicator/Sharing Lead', 'Vulnerability Manager Surge Cyber')
+  defaultFunctionalRoles <- c('Agency Lead','Business Operations Analyst','Business Operations Lead','Capability Engineer','Change and Configuration Management',
+                              'Chief Engineer','Cloud and Mobile Capability Lead','Communications Lead','Cyber Architect','Cyber Security Test Analyst',
+                              'Cyber Security Test Lead','Data Integrity Support','Data Presentation Capability Lead','Data Protection Capability Lead',
+                              'Data Quality Lead','Delivery Manager','Demand Modeling','Deputy Agency Lead','Deputy IAM Lead','Deputy Integration Lead','Deputy PM',
+                              'Deputy RFS Execution Lead','Deputy SA Manager','Deputy SIO Manager','Deputy Testing Lead','DI Architect','DI Data Analyst','DI Developer',
+                              'DI Development Lead','DI Field Engineer','DI Field Engineering Lead','DI Lead','DI Technical Lead','DI Tester','Digital Engineer',
+                              'Endpoint Security Capability Lead','Engineering Capability Lead','Engineering Resource Allocation Manager','Finance Manager',
+                              'Financial and Forecast Lead','Governance & Training Lead','Governance Analyst','IA Engineer','IA Lead','IA Security Lead','IAM Capability Lead',
+                              'IAM Capability Owner','IAM PM','Information Security Analyst','Integration Lead','IOS Engineer','IOS Manager','ITSM Lead','Lab Architect',
+                              'Lab Manager','Lab Support','Lead SIM','NAC Engineer','NAC Lead','PBS Lead','PBS Support','Perimeter Defense Capability Lead','Procurement Lead',
+                              'Product Owner','Product Owners Lead','Program Manager','Project Coordination Support','Project Coordinator','Project Coordinator Lead',
+                              'Project Expeditor','Quality Lead','Requirements Analyst','Requirements Lead','Resource Lead','Resource Support','RFS Execution Lead',
+                              'RFS Execution Oversight','RFS Portfolio Manager','RFS Response Lead','RFS Support','SA Manager','SDD Manager','SELC Lead','Service Desk Support',
+                              'ServiceNow Capability Lead','ServiceNow Developer','ServiceNow Engineer','SIO Manager','Solution Architect','Solution Architecture Lead',
+                              'Solution Architecture Support','Solutions Architect','Support Desk Lead','Systems Test & Integration Engineer','Talent Acquisition and Sourcing',
+                              'Talent Management Lead','Technical Test Lead','Technical Writer','Training Lead','Vulnerability Management Analyst','Vulnerability Management Lead')
+  
+  # defaultFunctionalRoles <- c('Project Manager', 'Lead Systems Integration Manager', 'Cyber Architect', 'Chief Engineer', 
+  # 'RFS Lead (Ongoing Assessment Lead)', 'Deputy Program Manager', 'Executive Assistant', 'Finance Manager', 
+  # 'Market Liaison', 'Ongoing Assessment Lead', 'Ongoing Assessment Manager', 'Ongoing Assessment Support', 
+  # 'PBS Lead', 'PBS Support', 'Procurement Lead', 'Procurement Analyst', 'Project Coordinator/Scheduler', 
+  # 'Project Coordinator/Scheduler Lead', 'Project Expediter', 'Project Operations Lead', 'Quality Lead', 
+  # 'Quality Support', 'Resource Lead', 'Resource Support', 'RFS Portfolio Manager', 'RFS Response Lead', 
+  # 'RFS Support', 'SubKs', 'Tech Writer', 'Transition-In Manager', 'Transition-In Support', 'Delivery Manager', 
+  # 'Agency Lead', 'Data Integration Engineer', 'Data Integration Team Lead', 'Data Integration Tech Lead', 
+  # 'Lab Support', 'Products Lead', 'Product Owner', 'Requirements Lead', 'Requirements Analyst', 
+  # 'Solution Design and Development Manager', 'Solution Architect Lead', 'Solution Architect', 'Engineer', 
+  # 'Cloud and Mobile Capability Lead', 'Data Presentation Capability Engineer', 'Data Presentation Capability Lead', 
+  # 'Data Protection Capability Lead', 'Deputy SIO Manager', 'Endpoint Security Capability Lead', 
+  # 'Engineering Capability Lead', 'Engineering Resource Lead', 'IDAM and PAM Capability Lead', 
+  # 'Incident Lead', 'Integration Lead', 'IOS Engineer (Tool)', 'IOS Lead', 'IOS OPS Liaison', 'IOS Project Coordinator',
+  # 'ITSM Lead CSI', 'Lab Architect', 'Lab Manager', 'Lab Support', 'Perimeter Defense Capability Lead', 
+  # 'ITIL Process Lead', 'Resource Allocation Lead', 'ServiceNow Capability Lead', 'ServiceNow Developer', 
+  # 'ServiceNow Engineer', 'Solution Integration and Operations Manager', 'Agency & Test Integration Engineer', 
+  # 'Deputy Solution Assurance Manager', 'Governance/Training Lead', 'Governance Analyst', 
+  # 'Information Assurance Engineer', 'Information Assurance Lead', 'Information Assurance SME', 
+  # 'Incident Response Lead', 'Quality Assurance/Metrics Lead', 'Quality Assurance Support', 'Solution Assurance Manager', 
+  # 'Testing Lead', 'Test Engineer', 'Training Lead', 'Vulnerability Manager', 'Technical Writer', 'Automation Lead', 
+  # 'Cyber Operations Manager', 'Cyber Ops Team Lead', 'Cyber Tools Lead', 'Forensics Engineer', 
+  # 'Incident Response Team Lead', 'Intrusion Detection Analyst', 'IR Process Manager', 'Penetration Tester', 
+  # 'Project Coordinator2', 'SIEM Analyst', 'Threat Indicator/Sharing Lead', 'Vulnerability Manager Surge Cyber')
+  
   userInputFunctionalRoles <- staffingMatrixFunctionalRoles[,2]
   userInputFunctionalRoles <- unique(userInputFunctionalRoles)
   relevantFunctionalRoles <- c()
