@@ -1,0 +1,18 @@
+Task Order	RFS Number	Title	Size	Specific FTE Count (Not Required)	Expected Award Date	PoP	p Go %	p Win %	OTIS Status	Projected End Date
+Delta	Delta RFS TBD 1	Asset Management Capability Maturation/Phase 1 Gap Fill		36	5/10/2019	18	0.7	0.9	Lead	
+Delta	Delta RFS TBD 2	Identity and Access Management Capability Maturation/Phase 2 Gap Fill		7	5/27/2019	18	0.7	0.9	Lead	
+Delta	Delta RFS TBD 3	Group D Agency Operations & Maintenance (O&M) Support		38	8/12/2019	12	0.7	0.9	Lead	
+Delta	Delta RFS TBD 4	Ongoing Assessment		21	9/2/2019	12	0.7	0.9	Lead	
+Delta	Delta RFS TBD 5	Cloud & Mobile Discovery		26	8/26/2019	7	0.7	0.9	Lead	
+Delta	Delta RFS TBD 6	HHS NIH All of Us Cybersecurity Support	Medium (10-20 FTEs)	9	5/29/2019	12	0.5	0.7	Qualified Lead	
+Delta	Delta RFS TBD 7	IRS Procurement and Limited Services		6	5/24/2019	6	0.5	0.5	Lead	
+Delta	Delta RFS TBD 8	Expanded CDM Services		11	9/9/2019	12	0.5	0.7	Lead	
+Delta	Delta RFS TBD 9	Dashboard		6	8/26/2019	3	0.3	0.3	Lead	
+Delta	Delta RFS TBD 10	Agency Renewals	Small (1-9 FTEs)	1	5/22/2019	3	0.7	0.9	Lead	
+Delta	Delta RFS TBD 11	Treasury Incident Response	Small (1-9 FTEs)	6	5/13/2019	12	0.5	0.9	Lead	
+Delta	Delta RFS TBD 12	NASA High Availability	Medium (10-20 FTEs)	13	5/20/2019	12	0.5	0.7	Lead	
+Delta	Delta RFS TBD 13	DHS Implementation of new CDM Capabilities (Task 3)		96	12/23/2019	48	0.7	0.9	Lead	
+Delta	Delta RFS TBD 14	Agency Implementation of New CDM Capabilities (Task 3)		63	7/8/2019	54	0.7	0.9	Lead	
+Delta	Delta RFS TBD 15	DHS Expanded Agency Services and Surge Cybersecurity Support (Tasks 4/5) RFS (Anticipated)		23	5/24/2019	54	0.7	0.9	Lead	
+Delta	Delta RFS TBD 16	Agency Expanded Agency Services and Surge Cybersecurity Support (Tasks 4/5) (Anticipated)		42	12/16/2019	49	0.5	0.9	Lead	
+Delta	Delta RFS TBD 18	Treasury Cyber ROI	Small (1-9 FTEs)	2	6/14/2019	12	0.5	0.5	Lead	

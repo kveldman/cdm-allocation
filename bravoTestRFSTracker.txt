@@ -1,0 +1,16 @@
+Task Order	RFS Number	Title	Size	Specific FTE Count (Not required)	Expected Award Date	PoP	p Go %	p Win %	OTIS Status	Projected End Date
+Bravo	Bravo RFS TBD 1	Phase 2 Gap Fill (Priv and Cred)	Large (20-49 FTEs)	35	2/14/2019	12	0.7	0.7	Qualified Lead	2/9/2020
+Bravo	Bravo RFS TBD 2	ServiceNow Phase 1 Data Integration	Small (1-9 FTEs)	5	4/1/2019	12	0.25		Idea	3/26/2020
+Bravo	Bravo RFS TBD 3	Enterprise GRC Tool	Small (1-9 FTEs)	5	4/1/2019	1			Idea	5/1/2019
+Bravo	Bravo RFS TBD 4	"DOE CDM Governance,  Training, and O&M"	Small (1-9 FTEs)	4	4/1/2019	36	0.5	0.7	Lead	3/16/2022
+Bravo	Bravo RFS TBD 5	ServiceNow Ticketing Stanardization and A&O Options	Small (1-9 FTEs)	5	4/1/2019	6	0.25		Idea	9/28/2019
+Bravo	Bravo RFS TBD 6	OPM O&M Continuation	Small (1-9 FTEs)	4	4/1/2019	12			Idea	3/26/2020
+Bravo	Bravo RFS TBD 7	"Cyber Capability Implementation, Integration, and Operation"	Large (20-49 FTEs)	44.5	4/1/2019	36			Idea	3/16/2022
+Bravo	Bravo RFS TBD 8	USDA Onsite Support	Small (1-9 FTEs)	5	4/1/2019	12	0.5		Idea	3/26/2020
+Bravo	Bravo RFS TBD 9	"IR Standardization and Operations (i.e., the RFS from DEFEND Alpha)"	Medium (10-20 FTEs)	0	5/1/2019	12			Idea	4/25/2020
+Bravo	Bravo RFS TBD 10	NAC	Large (20-49 FTEs)	30	5/1/2019	36	0.5	0.3	Lead	4/15/2022
+Bravo	Bravo RFS TBD 11	Part 2: Cloud and Mobile Post SDR/Obj2	Large (20-49 FTEs)	35	6/1/2019	18	0.5	0.5	Lead	11/22/2020
+Bravo	Bravo RFS TBD 12	Part 2: DOE Labs Phase 1 Gap Fill Post SDR	Medium (10-20 FTEs)	15	6/28/2019	24	0.5	0.5	Lead	6/17/2021
+Bravo	Bravo RFS TBD 13	Part 2: SIEM Procurement and Deployment	Small (1-9 FTEs)	5	7/1/2019	24	0.5	0.5	Proposal 	6/20/2021
+Bravo	Bravo RFS TBD 14	DEVSECOPS	Small (1-9 FTEs)	5	8/1/2019	36			Idea	7/16/2022
+Bravo	Bravo RFS TBD 15	Part 2: USDA Whitelisting Post SDR	Medium (10-20 FTEs)	15	7/1/2019	11	0.5	0.5	Lead	5/26/2020

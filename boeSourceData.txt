@@ -1,0 +1,28 @@
+Task Order	RFS	Task	Functional Role	LCAT	Hours	PoP	Expected Award Date
+Bravo	RFS13	Task 1 - Project Oversight	RFS Lead (Ongoing Assessment Lead) - Senior (7-10 yrs)	Project Manager 	978	12	1/20/2019
+Bravo	RFS13	Task 1 - Project Oversight	Project Expediter - Journeyman (3-7 yrs)	Administration/Clerical 	435	12	1/20/2019
+Bravo	RFS13	Task 1 - Project Oversight	Agency Lead - Senior (7-10 yrs)	Project Manager 	217	12	1/20/2019
+Bravo	RFS13	Task 1 - Project Oversight	PBS Support  - Journeyman (3-7 yrs)	Financial Analyst 	217	12	1/20/2019
+Bravo	RFS13	Task 1 - Project Oversight	Quality Assurance/Metrics Lead - Senior (7-10 yrs)	Quality Assurance Specialist 	113	12	1/20/2019
+Bravo	RFS13	Task 1 - Project Oversight	RFS Portfolio Manager - Senior (7-10 yrs)	Project Manager 	152	12	1/20/2019
+Bravo	RFS13	Task 1 - Project Oversight	Procurement Lead - Journeyman (3-7 yrs)	Business Systems Analyst 	65	12	1/20/2019
+Bravo	RFS13	Task 1 - SELC	Agency Lead - Senior (7-10 yrs)	Project Manager 	40	12	1/20/2019
+Bravo	RFS13	Task 1 - SELC	Solution Design and Development Manager - Master (10+ yrs)	Enterprise Architect  	8	12	1/20/2019
+Bravo	RFS13	Task 1 - SELC	Solution Integration and Operations Manager - Master (10+ yrs)	Enterprise Architect  	8	12	1/20/2019
+Bravo	RFS13	Task 1 - SELC	Product Owner  - Senior (7-10 yrs)	Applications Systems Analyst 	120	12	1/20/2019
+Bravo	RFS13	Task 2 - RFS Labor and Travel	Information Assurance SME - Journeyman (3-7 yrs)	Information Assurance/Security Specialist 	40	12	1/20/2019
+Bravo	RFS13	Task 2 - RFS Labor and Travel	Test Engineer - Senior (7-10 yrs)	Test Engineer 	320	12	1/20/2019
+Bravo	RFS13	Task 2 - RFS Labor and Travel	Requirements Analyst - Entry Level (0-3 yrs)	Applications Systems Analyst 	320	12	1/20/2019
+Bravo	RFS13	Task 2 - RFS Labor and Travel	Requirements Analyst - Journeyman (3-7 yrs)	Applications Systems Analyst 	320	12	1/20/2019
+Bravo	RFS13	Task 3 - RFS Labor and Travel	Endpoint Security Capability Lead - Journeyman (3-7 yrs)	Network Specialist 	3290	12	1/20/2019
+Bravo	RFS13	Task 3 - RFS Labor and Travel	Perimeter Defense Capability Lead - Journeyman (3-7 yrs)	Network Specialist 	9708	12	1/20/2019
+Bravo	RFS13	Task 3 - RFS Labor and Travel	Endpoint Security Capability Lead - Journeyman (3-7 yrs)	Network Specialist 	312	12	1/20/2019
+Bravo	RFS13	Task 3 - RFS Labor and Travel	Automation Lead - Senior (7-10 yrs)	Information Assurance/Security Specialist 	312	12	1/20/2019
+Bravo	RFS13	Task 3 - RFS Labor and Travel	Solution Architect - Senior (7-10 yrs)	Subject Matter Expert 	540	12	1/20/2019
+Bravo	RFS13	Task 3 - RFS Labor and Travel	Integration Lead - Senior (7-10 yrs)	Subject Matter Expert 	470	12	1/20/2019
+Bravo	RFS13	Task 3 - RFS Labor and Travel	Technical Writer - Journeyman (3-7 yrs)	Technical Writer  	312	12	1/20/2019
+Bravo	RFS13	Task 3 - RFS Labor and Travel	Project Coordinator/Scheduler - Journeyman (3-7 yrs)	Business Process Consultant 	740	12	1/20/2019
+Bravo	RFS13	Task 3 - RFS Labor and Travel	Requirements Analyst - Journeyman (3-7 yrs)	Applications Systems Analyst 	260	12	1/20/2019
+Bravo	RFS13	Task 3 - RFS Labor and Travel	Requirements Analyst - Entry Level (0-3 yrs)	Applications Systems Analyst 	940	12	1/20/2019
+Bravo	RFS13	Task 3 - RFS Labor and Travel	Training  - Senior (7-10 yrs)	Training Specialist  	10	12	1/20/2019
+Bravo	RFS13	Task 3 - RFS Labor and Travel	Training Lead - Journeyman (3-7 yrs)	Training Specialist  	40	12	1/20/2019

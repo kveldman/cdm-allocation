@@ -1,363 +1,556 @@
 shinyServer(function(input, output,session) {
   # Change the below commented code if the working directory is a different folder from the current folder
-  # setwd("C:/Users/Kyle/Documents/CDM/R Testing/Allocation/cdm-allocation")
+  # setwd("C:/Users/591548/OneDrive - BOOZ ALLEN HAMILTON/CDM DEFEND/CDM Staffing/CDM DEFEND Resource Allocation/cdm-allocation")
   
-  # Import txt file of the most recent spend plan and task breakdown
-  rawDataSet <- read.table("0124spendplan.txt", sep = "\t", header = TRUE, fill = TRUE, stringsAsFactors=FALSE)
-  taskBreakdown <- read.table("task-breakdown.txt", sep = "\t", header = TRUE, fill = TRUE, stringsAsFactors=FALSE)
-  names(taskBreakdown) <- c('Task Order','Task/RFS','Title','Task Lead','PBS Support')
+  ############################Centralized file import and minor data transformation############################
   
-  taskDT <- data.frame(matrix(taskBreakdown, ncol = 5), stringsAsFactors = FALSE)
+  #Historical spend data from PBS
+  rawHistoricalData <- read.table("manuallyCombinedPBS.txt", sep = "\t", header = TRUE, fill = TRUE, stringsAsFactors=FALSE)  
   
-  # Rename 'Role' column to LCAT as per stakeholder specification
-  names(rawDataSet)[names(rawDataSet) == "Role"] <- "LCAT"
+  #Job number decode for PBS data
+  jobNumberDecode <- read.table("jobNumberDecode.txt", sep = "\t", header = TRUE, fill = TRUE, stringsAsFactors=FALSE)        
   
-  # Import more accurate Functional Roles from the Staffing Matrix subset
-  functionalRoleMapping <- read.table("cdm-staffing-matrix-0124.txt", sep = "\t", header = TRUE, fill = TRUE, stringsAsFactors=FALSE)
-  names(functionalRoleMapping)[names(functionalRoleMapping) == "Functional.Role"] <- "Functional Role"
-  names(functionalRoleMapping)[1] <- 'ID'
-
-  # Clean the data set of empty columns to improve processing time.  A lot of the spend plan is "noise"
+  #Forecasted spend data from the Combined Spend Plan
+  rawDataSet <- read.table("0201spendplan.txt", sep = "\t", header = TRUE, fill = TRUE, stringsAsFactors=FALSE)               
+  
+  #Clean the data set of empty columns to improve processing time. A lot of the spend plan is "noise."
   rawDataSet <- purgeEmptyColumns(rawDataSet)
   
+  #Get polished tasks for summarized spend plan
+  spendPlanTaskDecode <- read.table("taskNameDecodeCSP.txt", sep = "\t", header = TRUE, fill = TRUE, stringsAsFactors=FALSE)
+  
+  #Import more accurate Demographic Information from the Staffing Matrix subset
+  DemographicMapping <- read.table("CDM Staffing Matrix for ITSM.txt", header = TRUE, fill = TRUE, stringsAsFactors=FALSE, sep="\t")
+  names(DemographicMapping) <- c("Company","ID","Last_Name","First_Name","CDM_Start_Date","End_Date","Task_Order",
+                                 "Workstream","Org","Team","Functional_Role","Bravo_LCAT","Delta_LCAT")  
+  
+  #Import and Transform Bravo RFS Tracker
+  rawBravoRFSTracker <- read.table("bravoTestRFSTracker.txt", sep = "\t", header = TRUE, fill = TRUE, stringsAsFactors=FALSE)
+  parsedBravoRFSTracker <- rawBravoRFSTracker[,c('Task.Order','RFS.Number','Specific.FTE.Count..Not.required.','Expected.Award.Date','PoP','OTIS.Status','p.Go..','p.Win..')]
+  names(parsedBravoRFSTracker) <- c('taskOrder','RFSName','totalFTE','startDate','Length','OTIS','pGo','pWin')
+  
+  #Import and Transform Delta RFS Tracker
+  rawDeltaRFSTracker <- read.table("deltaTestRFSTracker.txt", sep = "\t", header = TRUE, fill = TRUE, stringsAsFactors=FALSE)
+  parsedDeltaRFSTracker <- rawDeltaRFSTracker[,c('Task.Order','RFS.Number','Specific.FTE.Count..Not.Required.','Expected.Award.Date','PoP','OTIS.Status','p.Go..','p.Win..')]
+  names(parsedDeltaRFSTracker) <- c('taskOrder','RFSName','totalFTE','startDate','Length','OTIS','pGo','pWin')
+  
+  #Import and Transform BOE data
+  rawBoeData <- read.table("BOEdata.txt", sep = "\t", header = TRUE, fill = TRUE, stringsAsFactors=FALSE)
+  parsedBoeData <- rawBoeData[,c('Task.Order','RFS','Hours','Expected.Award.Date','PoP','Functional_Role','Bravo_LCAT','Delta_LCAT')]
+  names(parsedBoeData) <- c('taskOrder','RFSName','Hours','startDate','Length','Functional_Role','Bravo_LCAT','Delta_LCAT')
+  
+  ########################Transform different sources into desired format for merging######################################################
+  polishedHistoricalData <- transformHistoricalData(rawHistoricalData,jobNumberDecode)
+  spendPlanForecastSummary <- transformSpendPlanData(rawDataSet,spendPlanTaskDecode)
+  polishedBravoRFSTracker <- transformRFSTracker(parsedBravoRFSTracker)
+  polishedDeltaRFSTracker <- transformRFSTracker(parsedDeltaRFSTracker)
+  polishedBOEData <- transformBOEData(parsedBoeData)
+  
+  
+  #Aggregate of the PBS data which reduces it to a third of the size
+  historicalAggregate <- ddply(polishedHistoricalData, .(taskOrder, JobNo, EmpNo, TransDate), numcolwise(sum))
+
+  
+  # # Import txt file of the most recent spend plan and task breakdown
+  # 
+  # taskBreakdown <- read.table("task-breakdown.txt", sep = "\t", header = TRUE, fill = TRUE, stringsAsFactors=FALSE)
+  # names(taskBreakdown) <- c('Task Order','Task/RFS','Title','Task Lead','PBS Support')
+  # taskDT <- data.frame(matrix(taskBreakdown, ncol = 5), stringsAsFactors = FALSE)
+  # 
+  
+
+  
+
+  
+  #Bind all hourly data sources
+  testHourData <- rbind(historicalAggregate,spendPlanForecastSummary)
+  
+
   #Table containing position information for display
-  personnelInfo <- data.frame(rawDataSet[,2:6])
-  names(personnelInfo) <- names(rawDataSet)[2:6]
+  masterDataForGraph <- merge(testHourData, DemographicMapping, by.x = 'EmpNo', by.y = 'ID', 
+                              all.x = TRUE, all.y = FALSE)
+  masterDataForGraph <- bind_rows(masterDataForGraph,polishedBOEData,polishedBravoRFSTracker,polishedDeltaRFSTracker)
   
-  #The headers of the Month Total columns contain the numerical version of the month and the allocation for that month
-  #This parses for that information
-  currentHeaderNames <- names(monthValues <- rawDataSet[ , names(rawDataSet) == "ID" | grepl( "Mo.Hours" , names(rawDataSet) ) ])
-  newHeaderValues <- c('ID')
-  currentMonthValues <- c()
-  monthlyAllocations <- c()
-  for (x in currentHeaderNames){
-    if(x!='ID'){
-      newHeaderValues <- c(newHeaderValues,format((as.Date(as.numeric(substring(x,10,14)), origin="1899-12-30")), "%Y-%m"))
-      currentMonthValues <- c(currentMonthValues,substring(x,10,14))
-      monthlyAllocations <- c(monthlyAllocations, as.numeric(substring(x,nchar(x)-2,nchar(x))))
+
+  for(i in 1:nrow(masterDataForGraph)){
+    if(is.na(masterDataForGraph$pGo[i])){
+      masterDataForGraph$pGo[i]=1      
+    }
+    if(is.na(masterDataForGraph$pWin[i])){
+      masterDataForGraph$pWin[i]=1      
     }
   }
+  masterDataForGraph$pGo = as.numeric(masterDataForGraph$pGo)
+  masterDataForGraph$pWin = as.numeric(masterDataForGraph$pWin)
   
+  #Filter Capabilities
   observe({
-    updateSelectizeInput(session, 'tasks', choices = c('All',getTaskNames(rawDataSet)), server = TRUE, selected = 'All')
-    updateSelectInput(session = session, inputId = "Function", choices = getFunctionalRoles(functionalRoleMapping), selected = 'All')
-    updateSelectInput(session = session, inputId = "lcat", choices = getLCATs(rawDataSet$LCAT), selected = 'All')
-    updateSelectInput(session = session, inputId = "monthOfInterest", choices = c('N/A','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'), selected = 'N/A')
-    updateSelectInput(session = session, inputId = "allocationFlag", choices = c('All','Over (>105%)','At (80-105%)','Under (1-80%)'), selected = 'All')
-  })  
+    updateSelectizeInput(session, 'forecastTasks', choices = c('All',unique(sort(summaryForecastTable()$JobNo))), server = TRUE, selected = 'All')
+    updateSelectInput(session = session, inputId = "forecastWorkstream", choices = c('All',unique(sort(summaryForecastTable()$Workstream))), selected = 'All')
+    updateSelectInput(session = session, inputId = "forecastOrg", choices = c('All',unique(sort(summaryForecastTable()$Org))), selected = 'All')
+    updateSelectInput(session = session, inputId = "forecastTeam", choices = c('All',unique(sort(summaryForecastTable()$Team))), selected = 'All')
+    updateSelectInput(session = session, inputId = "forecastFunction", choices = c('All',unique(sort(masterDataForGraph$Functional_Role))), selected = 'All')
+    updateSelectInput(session = session, inputId = "forecastDeltaLcat", choices = c('All',unique(sort(masterDataForGraph$Delta_LCAT))), selected = 'All')
+    updateSelectInput(session = session, inputId = "forecastBravoLcat", choices = c('All',unique(sort(masterDataForGraph$Bravo_LCAT))), selected = 'All')
+    updateSelectInput(session = session, inputId = "forecastCompany", choices = c('All',unique(sort(masterDataForGraph$Company))), selected = 'All')
+    })
   
-  observeEvent(input$resetAll, {
-    updateSelectInput(session = session, inputId = "team", selected = 'All')
-    updateSelectInput(session = session, inputId = "tasks", selected = 'All')
-    updateSelectInput(session = session, inputId = "Function", selected = 'All')
-    updateSelectInput(session = session, inputId = "lcat", selected = 'All')
-    updateSelectInput(session = session, inputId = "filledStatus", selected = 'All')
-    updateSelectInput(session = session, inputId = "monthOfInterest", selected = 'N/A')
-    updateSelectInput(session = session, inputId = "allocationFlag", selected = 'All')
+  summaryForecastTable <- reactive({
+    finalForecastTable <- masterDataForGraph
+    
+    if (input$forecastingTaskOrder != "All") {
+      if(input$forecastingTaskOrder == 'Bravo'){
+        finalForecastTable <- finalForecastTable[finalForecastTable$taskOrder == 'Bravo',]
+      }else{
+        finalForecastTable <- finalForecastTable[finalForecastTable$taskOrder == 'Delta',]
+      }
+    }
+    
+    if (input$forecastFunction != "All"){
+      finalForecastTable <- finalForecastTable[which(finalForecastTable$Functional_Role == input$forecastFunction), ]
+    }
+    
+    if (input$forecastWorkstream != "All"){
+      finalForecastTable <- finalForecastTable[which(finalForecastTable$Workstream == input$forecastWorkstream), ]
+    }
+    
+    if (input$forecastOrg != "All"){
+      finalForecastTable <- finalForecastTable[which(finalForecastTable$Org == input$forecastOrg), ]
+    }
+    
+    if (input$forecastTeam != "All"){
+      finalForecastTable <- finalForecastTable[which(finalForecastTable$Team == input$forecastTeam), ]
+    }
+    
+    return(finalForecastTable)
   })
   
-  summaryTable <- reactive({
-    #Pull in full data set
-    filteredDataTable <- rawDataSet
-    essentialColumns <- names(filteredDataTable)[1:5]
+  output$plot <- renderPlotly({
     
-    #Get month values from data set
-    monthValues <- c()
-    for (x in names(filteredDataTable[ ,grepl( "Mo.Hours" , names(filteredDataTable) ) ])){
-      monthValues <- c(monthValues,substring(x,10,14))
-    }
-    
-    #Removes Month Total columns from data set.  Those were only valuable for their headers.
-    filteredDataTable <- filteredDataTable[ , !grepl( "Mo.Hours" , names(filteredDataTable) ) ]
-    
-    #Get month totals for allocation filters based on unaltered totals
-    unfilteredExportTable <- c()
-    for(z in c(1:nrow(filteredDataTable))){
-      unfilteredMonthTotals <- c()
-      for(u in c(1:length(monthValues))){
-        currentMonthTotal <- 0
-        currentLine <- filteredDataTable[z ,grepl( monthValues[u] , names(filteredDataTable) )]
-        currentMonthTotal <- sum(as.numeric(currentLine[grepl('-',currentLine) == FALSE]))
-        unfilteredMonthTotals <- c(unfilteredMonthTotals, currentMonthTotal)
-      }
-      unfilteredExportTable <- c(unfilteredExportTable, c(filteredDataTable[z,'ID'],round(sum(unfilteredMonthTotals)/2080,digits=2),unfilteredMonthTotals))
-    }
-    
-    #Final table assembly
-    unfilteredMonthDT <- data.frame(matrix(unfilteredExportTable, ncol = 14, byrow = TRUE), stringsAsFactors = FALSE)
-    monthLabels <- c('Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec')
-    for(u in 1:length(monthLabels)){
-      monthLabels[u] <- paste(monthLabels[u],' (',monthlyAllocations[u],')',sep = '')
-    }
-    names(unfilteredMonthDT) <- c('ID','FTE',monthLabels)
-    unfilteredMonthDT <- unfilteredMonthDT[unfilteredMonthDT$FTE>0,]
-    
-    for(x in 2:ncol(unfilteredMonthDT)){
-      unfilteredMonthDT[,x] = as.numeric(unfilteredMonthDT[,x])
-    }
-    
-    #Ability to filter by Delta and Bravo
-    if (input$team != "All") {
-      if(input$team == 'Bravo'){
-        filteredDataTable <- filteredDataTable[,grepl('DEF.D',names(filteredDataTable)) == FALSE]
+    if (input$forecastingTaskOrder != "All") {
+      if(input$forecastingTaskOrder == 'Bravo'){
+        masterDataForGraph <- masterDataForGraph[masterDataForGraph$taskOrder == 'Bravo',]
       }else{
-        filteredDataTable <- filteredDataTable[,grepl('DEF.B',names(filteredDataTable)) == FALSE]
+        masterDataForGraph <- masterDataForGraph[masterDataForGraph$taskOrder == 'Delta',]
       }
     }
     
-    #Ability to filter data by tasks and RFSs of interest
-    #A lot of columns are removes using numerical calculations.  This preserves the personnel info
-    columnsToKeep <- c(essentialColumns)
-    if(is.na(length(input$tasks))==FALSE && !('All' %in% input$tasks)){
-      for(n in c(1:length(input$tasks))){
-        if(grepl('RFS',input$tasks[n])){
-          columnsToKeep <- c(columnsToKeep,names(filteredDataTable)[grepl(input$tasks[n],names(filteredDataTable))])
-        } else{
-          tempColumns <- names(filteredDataTable)[grepl(input$tasks[n],names(filteredDataTable))]
-          columnsToKeep <- c(columnsToKeep, tempColumns[grepl('RFS',tempColumns) == FALSE])
-        }
+    if(is.na(length(input$forecastTasks))==FALSE && !('All' %in% input$forecastTasks)){
+      selectedTasks <- c()
+      for(n in c(1:length(input$forecastTasks))){
+        selectedTasks <- c(selectedTasks, input$forecastTasks[n])
       }
-      filteredDataTable <- filteredDataTable[,columnsToKeep]
+      masterDataForGraph <- masterDataForGraph[masterDataForGraph$JobNo %in% selectedTasks,]
     }
     
-    #Table preserving personnel data
-    personnelDT <- filteredDataTable[,essentialColumns]
-    
-    #Gets month totals for each record
-    exportTable <- c()
-    for(z in c(1:nrow(filteredDataTable))){
-      monthTotals <- c()
-      for(u in c(1:length(monthValues))){
-        currentMonthTotal <- 0
-        currentLine <- filteredDataTable[z ,grepl( monthValues[u] , names(filteredDataTable) )]
-        currentMonthTotal <- sum(as.numeric(currentLine[grepl('-',currentLine) == FALSE]))
-        monthTotals <- c(monthTotals, currentMonthTotal)
-      }
-      exportTable <- c(exportTable, c(filteredDataTable[z,'ID'],round(sum(monthTotals)/2080,digits=2),monthTotals))
+    if (input$forecastFunction != "All"){
+      masterDataForGraph <- masterDataForGraph[which(masterDataForGraph$Functional_Role == input$forecastFunction), ]
     }
     
-    #Final table assembly
-    monthDT <- data.frame(matrix(exportTable, ncol = 14, byrow = TRUE), stringsAsFactors = FALSE)
-    monthLabels <- c('Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec')
-    for(u in 1:length(monthLabels)){
-      monthLabels[u] <- paste(monthLabels[u],' (',monthlyAllocations[u],')',sep = '')
-    }
-    names(monthDT) <- c('ID','FTE',monthLabels)
-    
-    #Combines personnel info, corrected functional roles, and month aggregates
-    finalTable <- merge(merge(personnelDT,monthDT,by="ID"),functionalRoleMapping,all.x = TRUE,all.y = FALSE, by='ID')
-    finalColumnOrder <- c('ID','Resource','Functional Role','LCAT','FTE',monthLabels)
-    finalTable <- finalTable[,finalColumnOrder]
-    #Converts the month totals to numeric for future calculations and sortings
-    for(c in 5:ncol(finalTable)){
-      finalTable[,c] = as.numeric(finalTable[,c])
+    if (input$forecastWorkstream != "All"){
+      masterDataForGraph <- masterDataForGraph[which(masterDataForGraph$Workstream == input$forecastWorkstream), ]
     }
     
-    #Ability to filter data by functional role of interest
-    if ((input$Function != "All") && (length(input$Function))){
-      if (input$Function != "Other") {
-        #The use of which() here prevents the table from populating with NAs
-        finalTable <- finalTable[which(finalTable$"Functional Role" == input$Function), ]
-      } else{
-        listOfFunctions <- getFunctionalRoles(functionalRoleMapping)
-        finalTable <- finalTable[!(finalTable$"Functional Role" %in% listOfFunctions),]
+    if (input$forecastOrg != "All"){
+      masterDataForGraph <- masterDataForGraph[which(masterDataForGraph$Org == input$forecastOrg), ]
+    }
+
+    if (input$forecastTeam != "All"){
+      masterDataForGraph <- masterDataForGraph[which(masterDataForGraph$Team == input$forecastTeam), ]
+    }
+    
+    if (input$forecastDeltaLcat != "All"){
+      masterDataForGraph <- masterDataForGraph[which(masterDataForGraph$Delta_LCAT == input$forecastDeltaLcat), ]
+    }
+    
+    if (input$forecastBravoLcat != "All"){
+      masterDataForGraph <- masterDataForGraph[which(masterDataForGraph$Bravo_LCAT == input$forecastBravoLcat), ]
+    }
+    
+    if (input$forecastFilledStatus != "All") {
+      if (input$forecastFilledStatus == "Filled") {
+        masterDataForGraph <- masterDataForGraph[is.na(as.integer(masterDataForGraph$EmpNo)) == FALSE,]
+      }else if (input$forecastFilledStatus == "Unfilled") {
+        masterDataForGraph <- masterDataForGraph[is.na(as.integer(masterDataForGraph$EmpNo)) == TRUE,]
       }
     }
     
-    #Ability to filter data by LCAT of interest
-    if (input$lcat != "All") {
-      if (input$lcat != "Other") {
-        finalTable <- finalTable[finalTable$LCAT == input$lcat,]
-      } else{
-        listOfLcats <- sort(c('Other','Administration/Clerical', 'Applications Developer', 'Applications Systems Analyst', 'Business Process Consultant',
-                              'Business Systems Analyst', 'Chief Information Security Officer', 'Computer Forensic & Intrusion Analyst',
-                              'Configuration Management Specialist', 'Data Architect', 'Database Specialist', 'Enterprise Architect',
-                              'Financial Analyst', 'Hardware Engineer', 'Help Desk Specialist', 'Information Assurance/Security Specialist',
-                              'Network Specialist', 'Program Manager', 'Project Manager', 'Quality Assurance Specialist', 'Subject Matter Expert',
-                              'Technical Writer', 'Test Engineer', 'Training Specialist', 'Systems Engineer'))
-        finalTable <- finalTable[!(finalTable$LCAT %in% listOfLcats),]
+    #scenario planning (not working)
+    if(input$forecastScenario != 'Best'){
+      if(input$forecastScenario == 'P Go%'){
+        masterDataForGraph$Hours = masterDataForGraph$Hours*masterDataForGraph$pGo
       }
-    }
-    
-    #Ability to filter data by position status.  Assuming that every filled position (BAH employee or subcontractor)
-    #has a numeric ID
-    if (input$filledStatus != "All") {
-      if (input$filledStatus == "Filled") {
-        finalTable <- finalTable[is.na(as.integer(finalTable$ID)) == FALSE,]
-      }else if (input$filledStatus == "Unfilled") {
-        finalTable <- finalTable[is.na(as.integer(finalTable$ID)) == TRUE,]
+      if(input$forecastScenario == 'P Win%'){
+        masterDataForGraph$Hours = masterDataForGraph$Hours*masterDataForGraph$pWin
       }
-    }
-    
-    #Ability to filter by allocation.  Compares selected month total to max allocation collected earlier
-    if (input$monthOfInterest != 'N/A' && input$allocationFlag != 'All') {
-      currentColumn <- monthLabels[grepl(input$monthOfInterest,monthLabels)]
-      currentAllocation <- as.numeric(substring(monthLabels[grepl(input$monthOfInterest,monthLabels)],6,8))
-      if(input$allocationFlag == 'Over (>105%)'){
-        unfilteredMonthDT <- unfilteredMonthDT[unfilteredMonthDT[[currentColumn]] >= currentAllocation*1.05,]
-      }else if(input$allocationFlag == 'At (80-105%)'){
-        tempTable <- unfilteredMonthDT[unfilteredMonthDT[[currentColumn]] >= currentAllocation*0.8,]
-        unfilteredMonthDT <- tempTable[tempTable[[currentColumn]] <= currentAllocation*1.05,]
-      }else if(input$allocationFlag == 'Under (1-80%)'){
-        tempTable <- unfilteredMonthDT[unfilteredMonthDT[[currentColumn]] > 0,]
-        unfilteredMonthDT <- tempTable[tempTable[[currentColumn]] <= currentAllocation*0.8,]
-      }
-      finalTable <- finalTable[finalTable$ID %in% unfilteredMonthDT$ID,]
-    }
-    
-    finalTable <- finalTable[finalTable$FTE>0,]    
-    
-    return(finalTable)
-  })
-  
-  output$allocationTable <- DT::renderDataTable(server = FALSE, datatable(
-    summaryTable(),
-    selection = list(mode="single", target="cell"),
-    extensions = 'Buttons', options = list(
-      buttons = 'excel',dom = 'Bfrtipl')
-    # options=list(columnDefs = list(list(visible=FALSE, targets=c(5,7,20:31))))
-    ) 
-           # %>% 
-           # formatStyle(
-           #    c("Spend (FTE)","Oct","Nov","Dec","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep"),
-           #    textAlign = 'center'
-           # ) %>% 
-           # formatStyle(
-           #   'Oct', 'OctFlag',
-           #   backgroundColor = styleEqual(c('Over','Under'), c('#ffcccc','#b3c6ff'))
-           # ) %>% 
-           # formatStyle(
-           #   'Nov', 'NovFlag',
-           #   backgroundColor = styleEqual(c('Over','Under'), c('#ffcccc','#b3c6ff'))
-           # ) %>% 
-           # formatStyle(
-           #   'Dec', 'DecFlag',
-           #   backgroundColor = styleEqual(c('Over','Under'), c('#ffcccc','#b3c6ff'))
-           # ) %>% 
-           # formatStyle(
-           #   'Jan', 'JanFlag',
-           #   backgroundColor = styleEqual(c('Over','Under'), c('#ffcccc','#b3c6ff'))
-           # ) %>% 
-           # formatStyle(
-           #   'Feb', 'FebFlag',
-           #   backgroundColor = styleEqual(c('Over','Under'), c('#ffcccc','#b3c6ff'))
-           # ) %>% 
-           # formatStyle(
-           #   'Mar', 'MarFlag',
-           #   backgroundColor = styleEqual(c('Over','Under'), c('#ffcccc','#b3c6ff'))
-           # ) %>% 
-           # formatStyle(
-           #   'Apr', 'AprFlag',
-           #   backgroundColor = styleEqual(c('Over','Under'), c('#ffcccc','#b3c6ff'))
-           # ) %>% 
-           # formatStyle(
-           #   'May', 'MayFlag',
-           #   backgroundColor = styleEqual(c('Over','Under'), c('#ffcccc','#b3c6ff'))
-           # ) %>% 
-           # formatStyle(
-           #   'Jun', 'JunFlag',
-           #   backgroundColor = styleEqual(c('Over','Under'), c('#ffcccc','#b3c6ff'))
-           # ) %>% 
-           # formatStyle(
-           #   'Jul', 'JulFlag',
-           #   backgroundColor = styleEqual(c('Over','Under'), c('#ffcccc','#b3c6ff'))
-           # ) %>% 
-           # formatStyle(
-           #   'Aug', 'AugFlag',
-           #   backgroundColor = styleEqual(c('Over','Under'), c('#ffcccc','#b3c6ff'))
-           # ) %>% 
-           # formatStyle(
-           #   'Sep', 'SepFlag',
-           #   backgroundColor = styleEqual(c('Over','Under'), c('#ffcccc','#b3c6ff'))
-           # )
-  )
-  
-  output$taskTable <- DT::renderDataTable(datatable(taskBreakdown, options=list(dom = 't', pageLength = 15), rownames = FALSE))
-  
-  
-  output$filteredTable <- DT::renderDataTable(datatable({
-
-    userSelection <- input$allocationTable_cells_selected
-
-    data <- summaryTable()
-
-    if (length(userSelection)) {
-      data <- data[userSelection[1],]
-    }
-
-    if(length(userSelection)){
-      if((userSelection[2] >= 6)&(data[userSelection[2]] != 0)){
-
-        #Assemble secondary data table
-        userSelectionID <- toString(data[1])
-        userSelectedPersonnelInfo <- personnelInfo[personnelInfo$ID == userSelectionID,]
-
-        tempDate <- currentMonthValues[userSelection[2]-5]
-        tempTableFilteredByDate <- rawDataSet[ ,names(rawDataSet) == "ID" | grepl( tempDate , names(rawDataSet))]
-        tempTableFilteredByID <- tempTableFilteredByDate[tempTableFilteredByDate$ID == userSelectionID,]
-
-        tempColNames <- c()
-        tempColVals <- c()
-        for(c in c(1:ncol(tempTableFilteredByID))){
-          if(any(grep("-",tempTableFilteredByID[1,c]))){
-          }else{
-            tempColNames <- c(tempColNames,colnames(tempTableFilteredByID)[c])
-            tempColVals <- c(tempColVals,tempTableFilteredByID[1,c])
+      if(input$forecastScenario == 'Worst'){
+        for(i in 1:nrow(masterDataForGraph)){
+          if(masterDataForGraph$pGo[i] != 1){
+            masterDataForGraph$Hours[i] = 0
           }
         }
-
-        userSelectedDataTable <- data.frame(matrix(tempColVals, nrow = 1))
-        names(userSelectedDataTable) <- tempColNames
-
-
-        tempColNames2 <- c(names(userSelectedPersonnelInfo),'Total Month Hours','Total B Hours','Total D Hours','Total 2D Hours')
-        tempColVals2 <- c(userSelectedPersonnelInfo[1,])
-
-        tempTotal <- userSelectedDataTable[,grepl( "Mo.Hours", names(userSelectedDataTable))][1]
-        tempBTotal <- 0
-        tempDTotal <- 0
-        temp2DTotal <- 0
-        tempTaskValues <- c()
-        
-        for(q in c(1:ncol(userSelectedDataTable))){
-          if(grepl("DEF.B",names(userSelectedDataTable)[q]) && (grepl('total',tolower(names(userSelectedDataTable)[q]))==FALSE)){
-            tempBTotal <- tempBTotal + as.numeric(userSelectedDataTable[1,q])
-            tempColNames2 <- c(tempColNames2,names(userSelectedDataTable)[q])
-            tempTaskValues <- c(tempTaskValues,as.numeric(userSelectedDataTable[1,q]))
-          } else if(grepl("DEF.D",names(userSelectedDataTable)[q]) && (grepl('total',tolower(names(userSelectedDataTable)[q]))==FALSE)){
-            tempDTotal <- tempDTotal + as.numeric(userSelectedDataTable[1,q])
-            tempColNames2 <- c(tempColNames2,names(userSelectedDataTable)[q])
-            tempTaskValues <- c(tempTaskValues,as.numeric(userSelectedDataTable[1,q]))
-          }
-        }
-
-        tempColVals2 <- c(tempColVals2,tempTotal,tempBTotal,tempDTotal,temp2DTotal,tempTaskValues)
-        finalFilteredTable <- data.frame(matrix(tempColVals2, nrow = 1))
-        for(x in c(10:length(tempColNames2))){
-          tempColNames2[x] = substring(tempColNames2[x],1,nchar(tempColNames2[x])-15)
-        }
-        names(finalFilteredTable) <- tempColNames2
-        colnames(finalFilteredTable) <- gsub("\\.+", " ", colnames(finalFilteredTable))
-
-        return(datatable({finalFilteredTable},
-                         options=list(dom = 't', columnDefs = list(list(className = 'dt-center', targets = 6:ncol(finalFilteredTable)),
-                                                                   list(visible=FALSE, targets=c(1:5,9))))))
-      }else{
-        errorMessage <- data.frame(matrix(c('Please return to the main screen and select a valid month value.'),nrow = 1))
-        names(errorMessage)[1] <- 'Note:'
-        return(datatable(errorMessage, options=list(dom = 't'), rownames = FALSE))
       }
+    }
+
+    #Plot
+    summarizedMasterData <- ddply(masterDataForGraph, .(taskOrder, JobNo, TransDate), numcolwise(sum))
+    
+    chartTitle <- ''
+    axisTitle <- ''
+    if(input$selectedUnit == 'Hours'){
+      chartTitle <- 'Total Hours Per Month'
+      axisTitle <- 'Hours'
     }else{
-      errorMessage <- data.frame(matrix(c('Please return to the main screen and select a valid month value.'),nrow = 1))
-      names(errorMessage)[1] <- 'Note:'
-      return(datatable(errorMessage, options=list(dom = 't'), rownames = FALSE))
+      summarizedMasterData$Hours <- summarizedMasterData$Hours/2080
+      chartTitle <- 'Total FTE Per Month'
+      axisTitle <- 'FTE'
     }
+    
 
-    return()
-
-  }
-  )
-  )
+    dataToGraph <- dcast(summarizedMasterData, TransDate ~ JobNo, value.var = 'Hours')  
+    data.table::melt(dataToGraph, id.vars='TransDate') %>%
+    plot_ly(x = ~TransDate, y = ~value, type = 'bar',
+              name = ~variable, color = ~variable) %>%
+      layout(title=chartTitle, yaxis = list(title = axisTitle), xaxis=list(title="Month"),barmode = 'stack')
+  })
+  
+  
+  
+  # 
+  # #The headers of the Month Total columns contain the numerical version of the month and the allocation for that month
+  # #This parses for that information
+  # currentHeaderNames <- names(monthValues <- rawDataSet[ , names(rawDataSet) == "ID" | grepl( "Mo.Hours" , names(rawDataSet) ) ])
+  # newHeaderValues <- c('ID')
+  # currentMonthValues <- c()
+  # monthlyAllocations <- c()
+  # for (x in currentHeaderNames){
+  #   if(x!='ID'){
+  #     newHeaderValues <- c(newHeaderValues,format((as.Date(as.numeric(substring(x,10,14)), origin="1899-12-30")), "%Y-%m"))
+  #     currentMonthValues <- c(currentMonthValues,substring(x,10,14))
+  #     monthlyAllocations <- c(monthlyAllocations, as.numeric(substring(x,nchar(x)-2,nchar(x))))
+  #   }
+  # }
+  # 
+  # observe({
+  #   updateSelectizeInput(session, 'tasks', choices = c('All',getTaskNames(rawDataSet)), server = TRUE, selected = 'All')
+  #   updateSelectInput(session = session, inputId = "Function", choices = getFunctionalRoles(functionalRoleMapping), selected = 'All')
+  #   updateSelectInput(session = session, inputId = "lcat", choices = getLCATs(rawDataSet$LCAT), selected = 'All')
+  #   updateSelectInput(session = session, inputId = "monthOfInterest", choices = c('N/A','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'), selected = 'N/A')
+  #   updateSelectInput(session = session, inputId = "allocationFlag", choices = c('All','Over (>105%)','At (80-105%)','Under (1-80%)'), selected = 'All')
+  # })
+  # 
+  # observeEvent(input$resetAll, {
+  #   updateSelectInput(session = session, inputId = "team", selected = 'All')
+  #   updateSelectInput(session = session, inputId = "tasks", selected = 'All')
+  #   updateSelectInput(session = session, inputId = "Function", selected = 'All')
+  #   updateSelectInput(session = session, inputId = "lcat", selected = 'All')
+  #   updateSelectInput(session = session, inputId = "filledStatus", selected = 'All')
+  #   updateSelectInput(session = session, inputId = "monthOfInterest", selected = 'N/A')
+  #   updateSelectInput(session = session, inputId = "allocationFlag", selected = 'All')
+  # })
+  # 
+  # summaryTable <- reactive({
+  #   #Pull in full data set
+  #   filteredDataTable <- rawDataSet
+  #   essentialColumns <- names(filteredDataTable)[1:5]
+  # 
+  #   #Get month values from data set
+  #   monthValues <- c()
+  #   for (x in names(filteredDataTable[ ,grepl( "Mo.Hours" , names(filteredDataTable) ) ])){
+  #     monthValues <- c(monthValues,substring(x,10,14))
+  #   }
+  # 
+  #   #Removes Month Total columns from data set.  Those were only valuable for their headers.
+  #   filteredDataTable <- filteredDataTable[ , !grepl( "Mo.Hours" , names(filteredDataTable) ) ]
+  # 
+  #   #Get month totals for allocation filters based on unaltered totals
+  #   unfilteredExportTable <- c()
+  #   for(z in c(1:nrow(filteredDataTable))){
+  #     unfilteredMonthTotals <- c()
+  #     for(u in c(1:length(monthValues))){
+  #       currentMonthTotal <- 0
+  #       currentLine <- filteredDataTable[z ,grepl( monthValues[u] , names(filteredDataTable) )]
+  #       currentMonthTotal <- sum(as.numeric(currentLine[grepl('-',currentLine) == FALSE]))
+  #       unfilteredMonthTotals <- c(unfilteredMonthTotals, currentMonthTotal)
+  #     }
+  #     unfilteredExportTable <- c(unfilteredExportTable, c(filteredDataTable[z,'ID'],round(sum(unfilteredMonthTotals)/2080,digits=2),unfilteredMonthTotals))
+  #   }
+  # 
+  #   #Final table assembly
+  #   unfilteredMonthDT <- data.frame(matrix(unfilteredExportTable, ncol = 14, byrow = TRUE), stringsAsFactors = FALSE)
+  #   monthLabels <- c('Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec')
+  #   for(u in 1:length(monthLabels)){
+  #     monthLabels[u] <- paste(monthLabels[u],' (',monthlyAllocations[u],')',sep = '')
+  #   }
+  #   names(unfilteredMonthDT) <- c('ID','FTE',monthLabels)
+  #   unfilteredMonthDT <- unfilteredMonthDT[unfilteredMonthDT$FTE>0,]
+  # 
+  #   for(x in 2:ncol(unfilteredMonthDT)){
+  #     unfilteredMonthDT[,x] = as.numeric(unfilteredMonthDT[,x])
+  #   }
+  # 
+  #   #Ability to filter by Delta and Bravo
+  #   if (input$team != "All") {
+  #     if(input$team == 'Bravo'){
+  #       filteredDataTable <- filteredDataTable[,grepl('DEF.D',names(filteredDataTable)) == FALSE]
+  #     }else{
+  #       filteredDataTable <- filteredDataTable[,grepl('DEF.B',names(filteredDataTable)) == FALSE]
+  #     }
+  #   }
+  # 
+  #   #Ability to filter data by tasks and RFSs of interest
+  #   #A lot of columns are removes using numerical calculations.  This preserves the personnel info
+  #   columnsToKeep <- c(essentialColumns)
+  #   if(is.na(length(input$tasks))==FALSE && !('All' %in% input$tasks)){
+  #     for(n in c(1:length(input$tasks))){
+  #       if(grepl('RFS',input$tasks[n])){
+  #         columnsToKeep <- c(columnsToKeep,names(filteredDataTable)[grepl(input$tasks[n],names(filteredDataTable))])
+  #       } else{
+  #         tempColumns <- names(filteredDataTable)[grepl(input$tasks[n],names(filteredDataTable))]
+  #         columnsToKeep <- c(columnsToKeep, tempColumns[grepl('RFS',tempColumns) == FALSE])
+  #       }
+  #     }
+  #     filteredDataTable <- filteredDataTable[,columnsToKeep]
+  #   }
+  # 
+  #   #Table preserving personnel data
+  #   personnelDT <- filteredDataTable[,essentialColumns]
+  # 
+  #   #Gets month totals for each record
+  #   exportTable <- c()
+  #   for(z in c(1:nrow(filteredDataTable))){
+  #     monthTotals <- c()
+  #     for(u in c(1:length(monthValues))){
+  #       currentMonthTotal <- 0
+  #       currentLine <- filteredDataTable[z ,grepl( monthValues[u] , names(filteredDataTable) )]
+  #       currentMonthTotal <- sum(as.numeric(currentLine[grepl('-',currentLine) == FALSE]))
+  #       monthTotals <- c(monthTotals, currentMonthTotal)
+  #     }
+  #     exportTable <- c(exportTable, c(filteredDataTable[z,'ID'],round(sum(monthTotals)/2080,digits=2),monthTotals))
+  #   }
+  # 
+  #   #Final table assembly
+  #   monthDT <- data.frame(matrix(exportTable, ncol = 14, byrow = TRUE), stringsAsFactors = FALSE)
+  #   monthLabels <- c('Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec')
+  #   for(u in 1:length(monthLabels)){
+  #     monthLabels[u] <- paste(monthLabels[u],' (',monthlyAllocations[u],')',sep = '')
+  #   }
+  #   names(monthDT) <- c('ID','FTE',monthLabels)
+  # 
+  #   #Combines personnel info, corrected functional roles, and month aggregates
+  #   finalTable <- merge(merge(personnelDT,monthDT,by="ID"),functionalRoleMapping,all.x = TRUE,all.y = FALSE, by='ID')
+  #   finalColumnOrder <- c('ID','Resource','Functional Role','LCAT','FTE',monthLabels)
+  #   finalTable <- finalTable[,finalColumnOrder]
+  #   #Converts the month totals to numeric for future calculations and sortings
+  #   for(c in 5:ncol(finalTable)){
+  #     finalTable[,c] = as.numeric(finalTable[,c])
+  #   }
+  # 
+  #   #Ability to filter data by functional role of interest
+  #   if ((input$Function != "All") && (length(input$Function))){
+  #     if (input$Function != "Other") {
+  #       #The use of which() here prevents the table from populating with NAs
+  #       finalTable <- finalTable[which(finalTable$"Functional Role" == input$Function), ]
+  #     } else{
+  #       listOfFunctions <- getFunctionalRoles(functionalRoleMapping)
+  #       finalTable <- finalTable[!(finalTable$"Functional Role" %in% listOfFunctions),]
+  #     }
+  #   }
+  # 
+  #   #Ability to filter data by LCAT of interest
+  #   if (input$lcat != "All") {
+  #     if (input$lcat != "Other") {
+  #       finalTable <- finalTable[finalTable$LCAT == input$lcat,]
+  #     } else{
+  #       listOfLcats <- sort(c('Other','Administration/Clerical', 'Applications Developer', 'Applications Systems Analyst', 'Business Process Consultant',
+  #                             'Business Systems Analyst', 'Chief Information Security Officer', 'Computer Forensic & Intrusion Analyst',
+  #                             'Configuration Management Specialist', 'Data Architect', 'Database Specialist', 'Enterprise Architect',
+  #                             'Financial Analyst', 'Hardware Engineer', 'Help Desk Specialist', 'Information Assurance/Security Specialist',
+  #                             'Network Specialist', 'Program Manager', 'Project Manager', 'Quality Assurance Specialist', 'Subject Matter Expert',
+  #                             'Technical Writer', 'Test Engineer', 'Training Specialist', 'Systems Engineer'))
+  #       finalTable <- finalTable[!(finalTable$LCAT %in% listOfLcats),]
+  #     }
+  #   }
+  # 
+  #   #Ability to filter data by position status.  Assuming that every filled position (BAH employee or subcontractor)
+  #   #has a numeric ID
+  #   if (input$filledStatus != "All") {
+  #     if (input$filledStatus == "Filled") {
+  #       finalTable <- finalTable[is.na(as.integer(finalTable$ID)) == FALSE,]
+  #     }else if (input$filledStatus == "Unfilled") {
+  #       finalTable <- finalTable[is.na(as.integer(finalTable$ID)) == TRUE,]
+  #     }
+  #   }
+  # 
+  #   #Ability to filter by allocation.  Compares selected month total to max allocation collected earlier
+  #   if (input$monthOfInterest != 'N/A' && input$allocationFlag != 'All') {
+  #     currentColumn <- monthLabels[grepl(input$monthOfInterest,monthLabels)]
+  #     currentAllocation <- as.numeric(substring(monthLabels[grepl(input$monthOfInterest,monthLabels)],6,8))
+  #     if(input$allocationFlag == 'Over (>105%)'){
+  #       unfilteredMonthDT <- unfilteredMonthDT[unfilteredMonthDT[[currentColumn]] >= currentAllocation*1.05,]
+  #     }else if(input$allocationFlag == 'At (80-105%)'){
+  #       tempTable <- unfilteredMonthDT[unfilteredMonthDT[[currentColumn]] >= currentAllocation*0.8,]
+  #       unfilteredMonthDT <- tempTable[tempTable[[currentColumn]] <= currentAllocation*1.05,]
+  #     }else if(input$allocationFlag == 'Under (1-80%)'){
+  #       tempTable <- unfilteredMonthDT[unfilteredMonthDT[[currentColumn]] > 0,]
+  #       unfilteredMonthDT <- tempTable[tempTable[[currentColumn]] <= currentAllocation*0.8,]
+  #     }
+  #     finalTable <- finalTable[finalTable$ID %in% unfilteredMonthDT$ID,]
+  #   }
+  # 
+  #   finalTable <- finalTable[finalTable$FTE>0,]
+  # 
+  #   return(finalTable)
+  # })
+  # 
+  # output$allocationTable <- DT::renderDataTable(server = FALSE, datatable(
+  #   summaryTable(),
+  #   selection = list(mode="single", target="cell"),
+  #   extensions = 'Buttons', options = list(
+  #     buttons = 'excel',dom = 'Bfrtipl')
+  #   # options=list(columnDefs = list(list(visible=FALSE, targets=c(5,7,20:31))))
+  #   )
+  #          # %>%
+  #          # formatStyle(
+  #          #    c("Spend (FTE)","Oct","Nov","Dec","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep"),
+  #          #    textAlign = 'center'
+  #          # ) %>%
+  #          # formatStyle(
+  #          #   'Oct', 'OctFlag',
+  #          #   backgroundColor = styleEqual(c('Over','Under'), c('#ffcccc','#b3c6ff'))
+  #          # ) %>%
+  #          # formatStyle(
+  #          #   'Nov', 'NovFlag',
+  #          #   backgroundColor = styleEqual(c('Over','Under'), c('#ffcccc','#b3c6ff'))
+  #          # ) %>%
+  #          # formatStyle(
+  #          #   'Dec', 'DecFlag',
+  #          #   backgroundColor = styleEqual(c('Over','Under'), c('#ffcccc','#b3c6ff'))
+  #          # ) %>%
+  #          # formatStyle(
+  #          #   'Jan', 'JanFlag',
+  #          #   backgroundColor = styleEqual(c('Over','Under'), c('#ffcccc','#b3c6ff'))
+  #          # ) %>%
+  #          # formatStyle(
+  #          #   'Feb', 'FebFlag',
+  #          #   backgroundColor = styleEqual(c('Over','Under'), c('#ffcccc','#b3c6ff'))
+  #          # ) %>%
+  #          # formatStyle(
+  #          #   'Mar', 'MarFlag',
+  #          #   backgroundColor = styleEqual(c('Over','Under'), c('#ffcccc','#b3c6ff'))
+  #          # ) %>%
+  #          # formatStyle(
+  #          #   'Apr', 'AprFlag',
+  #          #   backgroundColor = styleEqual(c('Over','Under'), c('#ffcccc','#b3c6ff'))
+  #          # ) %>%
+  #          # formatStyle(
+  #          #   'May', 'MayFlag',
+  #          #   backgroundColor = styleEqual(c('Over','Under'), c('#ffcccc','#b3c6ff'))
+  #          # ) %>%
+  #          # formatStyle(
+  #          #   'Jun', 'JunFlag',
+  #          #   backgroundColor = styleEqual(c('Over','Under'), c('#ffcccc','#b3c6ff'))
+  #          # ) %>%
+  #          # formatStyle(
+  #          #   'Jul', 'JulFlag',
+  #          #   backgroundColor = styleEqual(c('Over','Under'), c('#ffcccc','#b3c6ff'))
+  #          # ) %>%
+  #          # formatStyle(
+  #          #   'Aug', 'AugFlag',
+  #          #   backgroundColor = styleEqual(c('Over','Under'), c('#ffcccc','#b3c6ff'))
+  #          # ) %>%
+  #          # formatStyle(
+  #          #   'Sep', 'SepFlag',
+  #          #   backgroundColor = styleEqual(c('Over','Under'), c('#ffcccc','#b3c6ff'))
+  #          # )
+  # )
+  # 
+  # output$taskTable <- DT::renderDataTable(datatable(taskBreakdown, options=list(dom = 't', pageLength = 15), rownames = FALSE))
+  # 
+  # 
+  # output$filteredTable <- DT::renderDataTable(datatable({
+  # 
+  #   userSelection <- input$allocationTable_cells_selected
+  # 
+  #   data <- summaryTable()
+  # 
+  #   if (length(userSelection)) {
+  #     data <- data[userSelection[1],]
+  #   }
+  # 
+  #   if(length(userSelection)){
+  #     if((userSelection[2] >= 6)&(data[userSelection[2]] != 0)){
+  # 
+  #       #Assemble secondary data table
+  #       userSelectionID <- toString(data[1])
+  #       userSelectedPersonnelInfo <- personnelInfo[personnelInfo$ID == userSelectionID,]
+  # 
+  #       tempDate <- currentMonthValues[userSelection[2]-5]
+  #       tempTableFilteredByDate <- rawDataSet[ ,names(rawDataSet) == "ID" | grepl( tempDate , names(rawDataSet))]
+  #       tempTableFilteredByID <- tempTableFilteredByDate[tempTableFilteredByDate$ID == userSelectionID,]
+  # 
+  #       tempColNames <- c()
+  #       tempColVals <- c()
+  #       for(c in c(1:ncol(tempTableFilteredByID))){
+  #         if(any(grep("-",tempTableFilteredByID[1,c]))){
+  #         }else{
+  #           tempColNames <- c(tempColNames,colnames(tempTableFilteredByID)[c])
+  #           tempColVals <- c(tempColVals,tempTableFilteredByID[1,c])
+  #         }
+  #       }
+  # 
+  #       userSelectedDataTable <- data.frame(matrix(tempColVals, nrow = 1))
+  #       names(userSelectedDataTable) <- tempColNames
+  # 
+  # 
+  #       tempColNames2 <- c(names(userSelectedPersonnelInfo),'Total Month Hours','Total B Hours','Total D Hours','Total 2D Hours')
+  #       tempColVals2 <- c(userSelectedPersonnelInfo[1,])
+  # 
+  #       tempTotal <- userSelectedDataTable[,grepl( "Mo.Hours", names(userSelectedDataTable))][1]
+  #       tempBTotal <- 0
+  #       tempDTotal <- 0
+  #       temp2DTotal <- 0
+  #       tempTaskValues <- c()
+  # 
+  #       for(q in c(1:ncol(userSelectedDataTable))){
+  #         if(grepl("DEF.B",names(userSelectedDataTable)[q]) && (grepl('total',tolower(names(userSelectedDataTable)[q]))==FALSE)){
+  #           tempBTotal <- tempBTotal + as.numeric(userSelectedDataTable[1,q])
+  #           tempColNames2 <- c(tempColNames2,names(userSelectedDataTable)[q])
+  #           tempTaskValues <- c(tempTaskValues,as.numeric(userSelectedDataTable[1,q]))
+  #         } else if(grepl("DEF.D",names(userSelectedDataTable)[q]) && (grepl('total',tolower(names(userSelectedDataTable)[q]))==FALSE)){
+  #           tempDTotal <- tempDTotal + as.numeric(userSelectedDataTable[1,q])
+  #           tempColNames2 <- c(tempColNames2,names(userSelectedDataTable)[q])
+  #           tempTaskValues <- c(tempTaskValues,as.numeric(userSelectedDataTable[1,q]))
+  #         }
+  #       }
+  # 
+  #       tempColVals2 <- c(tempColVals2,tempTotal,tempBTotal,tempDTotal,temp2DTotal,tempTaskValues)
+  #       finalFilteredTable <- data.frame(matrix(tempColVals2, nrow = 1))
+  #       for(x in c(10:length(tempColNames2))){
+  #         tempColNames2[x] = substring(tempColNames2[x],1,nchar(tempColNames2[x])-15)
+  #       }
+  #       names(finalFilteredTable) <- tempColNames2
+  #       colnames(finalFilteredTable) <- gsub("\\.+", " ", colnames(finalFilteredTable))
+  # 
+  #       return(datatable({finalFilteredTable},
+  #                        options=list(dom = 't', columnDefs = list(list(className = 'dt-center', targets = 6:ncol(finalFilteredTable)),
+  #                                                                  list(visible=FALSE, targets=c(1:5,9))))))
+  #     }else{
+  #       errorMessage <- data.frame(matrix(c('Please return to the main screen and select a valid month value.'),nrow = 1))
+  #       names(errorMessage)[1] <- 'Note:'
+  #       return(datatable(errorMessage, options=list(dom = 't'), rownames = FALSE))
+  #     }
+  #   }else{
+  #     errorMessage <- data.frame(matrix(c('Please return to the main screen and select a valid month value.'),nrow = 1))
+  #     names(errorMessage)[1] <- 'Note:'
+  #     return(datatable(errorMessage, options=list(dom = 't'), rownames = FALSE))
+  #   }
+  # 
+  #   return()
+  # 
+  # }
+  # )
+  # )
   
   
 }
@@ -467,5 +660,151 @@ getLCATs <- function(approvedLCATs){
     }
   }
   return(c('All','Other',sort(relevantLCATs)))
+}
+
+transformHistoricalData <- function(pbsDataSet,jobNumberDataSet){
+  rawHistoricalData <- pbsDataSet
+  
+  #Reformat raw data
+  names(rawHistoricalData) <- c('taskOrder','JobNo','EmpNo','TransDate','Hours')
+  transformedHistoricalData <- rawHistoricalData[,c('taskOrder','EmpNo','JobNo','TransDate','Hours')]
+  transformedHistoricalData$TransDate <- as.Date(transformedHistoricalData$TransDate,"%m/%d/%Y")
+  transformedHistoricalData$TransDate <- format(as.Date(transformedHistoricalData$TransDate), "%Y-%m")
+  transformedHistoricalData$taskOrder <- as.character(transformedHistoricalData$taskOrder)
+  transformedHistoricalData$EmpNo <- as.character(transformedHistoricalData$EmpNo)
+  transformedHistoricalData$JobNo <- as.character(transformedHistoricalData$JobNo)
+  #Remove TIAs
+  transformedHistoricalData <- transformedHistoricalData[transformedHistoricalData$Hours>0,]
+  
+  #Pair with proper task data
+  transformedHistoricalData <- merge(transformedHistoricalData, jobNumberDataSet, by.x = c("taskOrder", "JobNo"), by.y = c("Task.Order", "JobNo"), all.x = TRUE, all.y = FALSE)
+  transformedHistoricalData$JobNo <- transformedHistoricalData$Decode
+  transformedHistoricalData <- transformedHistoricalData[!names(transformedHistoricalData) == 'Decode']
+  
+  #Return polished dataset
+  return(transformedHistoricalData)
+}
+
+transformSpendPlanData <- function(dataset,taskDataSet){
+  # write.table(dataset, file = "audit.txt", sep = "\t")
+  
+  #Remove all columns except ID and relevant month data
+  dataset <- dataset[ , -which(names(dataset) %in% c('Type','Resource','Function','Role'))]
+  
+  #Transform data set
+  forecastDataSet <- melt(dataset[ , !grepl( "Mo.Hours" , names(dataset) ) ], id.vars=c("ID"))
+  forecastDataSet <- forecastDataSet[forecastDataSet$value > 0,]
+  names(forecastDataSet) <- c('empID','lineID','hours')
+  
+  #Parses individual headers for information on Task Order, Task, and Month and creates data table to merge
+  parsedColumns <- c()
+  currentUniqueValues <- unique(forecastDataSet$lineID)
+  for(x in 1:length(currentUniqueValues)){
+    #Gets value of interest
+    tempValue <- as.character(currentUniqueValues[x])
+    
+    #Pulls relevant date from the line item and converts it to the same format as the other data sets
+    tempDate <- format((as.Date(as.numeric(substring(tempValue,nchar(tempValue)-4,nchar(tempValue))), origin="1899-12-30")), "%Y-%m")
+    
+    #Determines Task Order for the line item
+    tempTaskOrder <- ''
+    if(grepl('DEF.B',tempValue)){
+      tempTaskOrder <- 'Bravo'
+    }else{
+      tempTaskOrder <- 'Delta'
+    }
+    
+    #Determines Task Name for the line item (using Combined Spend Plan format)
+    tempTaskName <- ''
+    if(grepl("RFS",tempValue)){
+      tempTaskName <- substr(tempValue,3,regexpr('RFS',tempValue)+5)
+    }else{
+      tempTaskName <- substr(tempValue,3,regexpr('LB',tempValue)-2)
+    }
+    
+    #Puts all relevant information in one place
+    
+    parsedColumns <- suppressWarnings(c(parsedColumns,tempValue, tempTaskOrder,tempTaskName, tempDate))
+  }
+  taskDT <- data.frame(matrix(parsedColumns, ncol = 4, byrow = TRUE), stringsAsFactors = FALSE)
+  names(taskDT) <- c('lineID','taskOrder','task','month')
+  
+  #Combines data tables to include relevant task order, task, and month data
+  dtParsedTasks <- merge(forecastDataSet, taskDT, by = 'lineID', all.x = TRUE, all.y = FALSE)
+  
+  #Format properly
+  summarizedSpendPlan <- dtParsedTasks[,c('taskOrder','empID','task','month','hours')]
+  names(summarizedSpendPlan) <- c('taskOrder','EmpNo','JobNo','TransDate','Hours')
+  summarizedSpendPlan$Hours <- as.numeric(summarizedSpendPlan$Hours)
+  
+  
+  #Substitute user friendly task data
+  summarizedSpendPlan <- merge(summarizedSpendPlan, taskDataSet, by.x = c("taskOrder", "JobNo"), by.y = c("taskOrder", "taskName"), all.x = TRUE, all.y = FALSE)
+  summarizedSpendPlan$JobNo <- summarizedSpendPlan$Decode
+  summarizedSpendPlan <- summarizedSpendPlan[!names(summarizedSpendPlan) == 'Decode']
+  
+  #Return polished dataset
+  return(summarizedSpendPlan)
+}
+
+transformRFSTracker <- function(rfsData){
+  #Parse and transform for relevant data
+  rfsArray <- c()
+  for(u in 1:nrow(rfsData)){
+    rfsLength <- rfsData$Length[u]  #Duration of current RFS
+    currentCount <- 0
+    currentDate <- as.Date(rfsData$startDate[u],"%m/%d/%Y") #Get RFS Start Date in usable format
+    currentFTE <- rfsData$totalFTE[u] #Get size (FTE) for total RFS
+    
+    #Loop to add a line item for each month of an RFS
+    while(currentCount < rfsLength){
+      #Get RFS data in desired order to join with other sources (remember to convert FTE to Hours)
+      rfsArray <- c(rfsArray, rfsData$taskOrder[u],rfsData$RFSName[u],'NA',format(as.Date(currentDate), "%Y-%m"),
+                    round(currentFTE*2080/rfsLength,2),rfsData$pGo[u],rfsData$pWin[u])
+      
+      currentDate <- currentDate + 31 #Move to next month to add a line item
+      currentCount <- currentCount+1
+    }
+  }
+  
+  #Reformat into final table
+  bravoTrackerDT <- data.frame(matrix(rfsArray, ncol = 7, byrow = TRUE), stringsAsFactors = FALSE)
+  names(bravoTrackerDT) <- c('taskOrder','JobNo','EmpNo','TransDate','Hours','pGo','pWin')
+  bravoTrackerDT$Hours <- as.numeric(bravoTrackerDT$Hours)
+  bravoTrackerDT <- bravoTrackerDT[bravoTrackerDT$TransDate < '2020-02',]   #Clips for one year in the future
+  
+  #Return transformed data set
+  return(bravoTrackerDT)
   
 }
+
+transformBOEData <- function(boeData){
+  #Parse and transform for relevant data
+  boeArray <- c()
+  for(u in 1:nrow(boeData)){
+    rfsLength <- boeData$Length[u]  #Duration of current RFS
+    currentCount <- 0
+    currentDate <- as.Date(boeData$startDate[u],"%m/%d/%Y") #Get RFS Start Date in usable format
+    
+    #Loop to add a line item for each month of an RFS
+    while(currentCount < rfsLength){
+      #Get RFS data in desired order to join with other sources (remember to convert FTE to Hours)
+      boeArray <- c(boeArray, boeData$taskOrder[u],boeData$RFSName[u],'NA',format(as.Date(currentDate), "%Y-%m"),
+                    boeData$Hours[u]/rfsLength,boeData$Functional_Role[u],boeData$Bravo_LCAT[u],boeData$Delta_LCAT[u])
+      currentDate <- currentDate + 31   #Move to next month to add a line item
+      currentCount <- currentCount+1
+    }
+  }
+  
+  #Reformat into final table
+  boeDT <- data.frame(matrix(boeArray, ncol = 8, byrow = TRUE), stringsAsFactors = FALSE)
+  names(boeDT) <- c('taskOrder','JobNo','EmpNo','TransDate','Hours',"Functional_Role","Bravo_LCAT","Delta_LCAT")
+  boeDT$Hours <- as.numeric(boeDT$Hours)
+  boeDT <- boeDT[boeDT$TransDate < '2020-02',]   #Clips for one year in the future
+  
+  #Return transformed data set
+  return(boeDT)
+}
+
+# Useful code
+# write.table(historicalAggregate, file = "audit.txt", sep = "\t")
